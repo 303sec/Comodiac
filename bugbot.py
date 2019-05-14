@@ -114,4 +114,22 @@ class scope_parser:
 		return
 
 
+class scan:
+	__init__(self):
+		return
+
+''' 
+How will scanning work?
+
+Initial idea: a pre-made command as a string with input for output directory and other parameters.
+Each command will have a function that can be called. A bit repetitive?
+
+Second idea: a JSON file with the commands stored in a dictionary-like format:
+
+{
+	'amass_active': 'amass -active -brute -ip -src -d $url -oA ~/bb/$url',
+	'amass_passive': 'amass -passive -ip -src -T TIME -ef OUTOFSCOPE -df SCOPE -oA DIR'
+} 
+'''
+	
 
