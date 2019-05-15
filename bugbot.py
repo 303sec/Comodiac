@@ -30,7 +30,6 @@ class scope_parser:
 		# Create the SQLite db
 		return 0
 
-
 	# @param scope: string: comma deliniated list of targets
 	# @param in_or_out: string: either 'in' or 'out', to determine if it is in or out of scope.
 	# @filesystem: adds the new hosts to in_scope_domains/ips.txt, sorts the file by unique entries.
@@ -63,8 +62,8 @@ class scope_parser:
 
 		# Sort both files to only have unique entries
 		print('[+] Sorting scope files by unique values')
-		subprocess.Popen('sort -u ' + domain_scope_file + ' > ' + domain_scope_file + '.tmp && mv ' + domain_scope_file + '.tmp ' + domain_scope_file)
-		subprocess.Popen('sort -u ' + ip_scope_file + ' > ip_tmp.txt && mv ip_tmp.txt ' + ip_scope_file)
+		subprocess.Popen('sort -u ' + domain_scope_file + ' > ' + domain_scope_file + '.tmp && mv ' + domain_scope_file + '.tmp ' + domain_scope_file, shell=True)
+		subprocess.Popen('sort -u ' + ip_scope_file + ' > ip_tmp.txt && mv ip_tmp.txt ' + ip_scope_file, shell=True)
 
 		parsed_scope = { 'ip_list': ip_list, 'domain_list': domain_list }
 
@@ -77,12 +76,14 @@ class scope_parser:
 	# @param parsed_scope: list: list of parsed hosts. Default = get from local file 
 	def parse_wildcard_domains(self, parsed_scope=None):
 		in_scope_domains = self.company_dir + '/scope/inscope_domains.txt'
+		wildcard_domain_file = self.company_dir + '/scope/wildcard_domains.txt'
+		wildcard_fragment_file = self.company_dir + '/scope/wildcard_fragments.txt'
 		wildcard_domains = []
 		wildcard_fragments = []
 		if parsed_scope == None:
 			# Parse all from inscope domain file
 			with open(in_scope_domains, 'r') as file:
-				for domain in domains:
+				for domain in file:
 					if '*' in domain:
 						split_domain = domain.split('.')
 						for part in split_domain:
@@ -92,8 +93,7 @@ class scope_parser:
 							elif '*' in part:
 								wildcard_fragments.append(domain)
 								break	
-			parsed_domains = {'wildcard_domains': wildcard_domains, 'wildcard_fragments': wildcard_fragments}						
-			return parsed_domains
+			parsed_domains = {'wildcard_domains': wildcard_domains, 'wildcard_fragments': wildcard_fragments}
 		else:
 			for domain in parsed_scope:
 				if '*' in domain:
@@ -105,8 +105,29 @@ class scope_parser:
 						elif '*' in part:
 							wildcard_fragments.append(domain)
 							break	
-			parsed_domains = {'wildcard_domains': wildcard_domains, 'wildcard_fragments': wildcard_fragments}						
-			return parsed_domains
+			parsed_domains = {'wildcard_domains': wildcard_domains, 'wildcard_fragments': wildcard_fragments}	
+
+		# Add parsed_domains to the wildcard file, and make them 'scannable'
+		with open(wildcard_domain_file, 'a') as file:
+			print('[+] Writing wildcard domains to wildcard_fragments.txt')
+			for domain in parsed_domains['wildcard_domains']:
+				# Remove the * in *.xxx.com		
+				scannable_domain = domain.replace('*.', '') + '\n'
+				# Write scannable wildcard domains to file
+				file.write(scannable_domain)
+		# Add parsed_domains to the fragment file.
+		with open(wildcard_fragment_file, 'a') as file:
+			print('[+] Writing wildcard fragments to wildcard_domains.txt')
+			for domain in parsed_domains['wildcard_fragments']:
+				# Write scannable wildcard domains to file
+				file.write(domain + '\n')
+				
+		# Make sure the files don't have any repeats	
+		print('[+] Sorting the wildcard domains & fragments by unique')
+		subprocess.Popen('sort -u ' + wildcard_domain_file + ' > ' + wildcard_domain_file + '.tmp && mv ' + wildcard_domain_file + '.tmp ' + wildcard_domain_file, shell=True)	
+		subprocess.Popen('sort -u ' + wildcard_fragment_file + ' > ' + wildcard_fragment_file + '.tmp && mv ' + wildcard_fragment_file + '.tmp ' + wildcard_fragment_file, shell=True)	
+
+		return parsed_domains					
 
 
 	def parse_ip_range(self):
@@ -115,21 +136,23 @@ class scope_parser:
 
 
 class scan:
-	__init__(self):
+	def __init__(self, company):
+		self.company_name = company_name
+		if os.path.exists(os.path.expanduser('~') + '/bb') == False:
+			print('[+] Creating ~/bb directory')
+			os.mkdir(os.path.expanduser('~') + '/bb')
+		self.base_dir = '~/bb/'
+		self.company_dir = os.path.expanduser('~/bb/') + self.company_name
+		self.add_new_company()
+
+	def subdomain_enumeration():
 		return
 
+
 ''' 
-How will scanning work?
 
-Initial idea: a pre-made command as a string with input for output directory and other parameters.
-Each command will have a function that can be called. A bit repetitive?
 
-Second idea: a JSON file with the commands stored in a dictionary-like format:
 
-{
-	'amass_active': 'amass -active -brute -ip -src -d $url -oA ~/bb/$url',
-	'amass_passive': 'amass -passive -ip -src -T TIME -ef OUTOFSCOPE -df SCOPE -oA DIR'
-} 
 '''
 	
 
