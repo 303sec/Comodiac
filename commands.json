@@ -1,0 +1,21 @@
+{
+    "amass_passive" : {
+        "command": "amass -passive -ip -src -df INPUT -oA OUTPUT",
+        "keywords": ["INPUT", "OUTPUT"],
+        "input": "wildcard_scope.txt",
+        "phase": "osint"
+    },
+    "amass_active" : {
+        "command": "amass -active -brute -w /usr/share/wordlists/all.txt -ip -src -df INPUT -oA OUTPUT",
+        "keywords": ["INPUT", "OUTPUT"],
+        "input": "wildcard_scope.txt",
+        "phase": "enumeration"
+    },
+    "aquatone" :{
+        "command": "cat INPUT | aquatone -ports PORTS -out OUTPUT",
+        "input": "discovered_hosts/domains.txt discovered_hosts/ips.txt",
+        "keywords": ["INPUT", "PORTS", "OUTPUT"],
+        "phase": "analysis"
+    }
+
+}
