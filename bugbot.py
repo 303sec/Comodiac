@@ -5,9 +5,13 @@ from bs4 import BeautifulSoup
 import sys
 import os
 import re
+import json
 import subprocess
+from datetime import datetime
 
-class scope_parser:
+# Refactoring note: I did not know about os.makedirs() when doing this, so there's a bunch of redundant code.
+
+class bugbot:
 	def __init__(self, company_name):
 		self.company_name = company_name
 		if os.path.exists(os.path.expanduser('~') + '/bb') == False:
@@ -24,15 +28,58 @@ class scope_parser:
 		else:
 			os.mkdir(self.company_dir)
 			os.mkdir(self.company_dir + '/scope')
+			os.mkdir(self.company_dir + '/discovered')
+			os.mkdir(self.company_dir + '/targets')
+			os.mkdir(self.company_dir + '/targets/ips')
+			os.mkdir(self.company_dir + '/targets/domains')
+			os.mkdir(self.company_dir + '/notes')
 		return 
 
 	def create_company_db(self):
 		# Create the SQLite db
 		return 0
 
+	# We run this function on any discovered subdomains / live IP addresses
+	# This whole function can do with rewriting, as it turns out making dirs is way easier than I thought.
+	def setup_target_folder(self, target, ip_or_domain):
+		target = target.replace('/', '-')
+		# mkdir ~/bb/COMPANY/targets/domains||ips/TARGET
+		target_dir = self.company_dir + '/targets/' + ip_or_domain + 's/' + target
+
+		if os.path.exists(target_dir) == False:
+				os.makedirs(target_dir)
+
+		if ip_or_domain == 'domain':
+			with open('tools.json', 'r') as tools_file:
+				tools = json.loads(tools_file)
+				for tool, tool_options in tools.items():
+					if tool_options['type'] == 'domain' or tool_options['type'] == 'both':
+						if os.path.exists(target_dir + '/' + tool_options['category']):
+							os.mkdir(target_dir + '/' + tool_options['category'])
+							# Make a folder for the category of scan
+			
+		elif ip_or_domain == 'ip':
+			with open('tools.json', 'r') as tools_file:
+				tools = json.load(tools_file)
+				for tool, tool_options in tools.items():
+					if tool_options['type'] == 'domain' or tool_options['type'] == 'both':
+						tool_category_dir = target_dir + '/' + tool_options['category']
+						tool_dir = tool_category_dir + '/' + tool
+						# Make a folder for the scan, including the category
+						os.makedirs(tool_dir)
+
+
+
+			
+			
+
+
+
+
 	# @param scope: string: comma deliniated list of targets
 	# @param in_or_out: string: either 'in' or 'out', to determine if it is in or out of scope.
 	# @filesystem: adds the new hosts to in_scope_domains/ips.txt, sorts the file by unique entries.
+	# @filesystem: adds a directory to company dir for each inscope host.
 	# @return parsed_scope: dict: dict with an array for both ip_list and domain_list
 	def parse_cli_scope(self, scope, in_or_out='in'):
 		scope_array = scope.split(',')
@@ -49,16 +96,17 @@ class scope_parser:
 			if target_no_slash.split('.')[-1].isdigit():
 				# IP addresses
 				ip_list.append(target)
+				# Add IP address to inscope_ips.txt
 				with open(ip_scope_file, 'a') as file:
 					file.write(target + '\n')
 				print('[+] Writing IP address ' + target + ' to scope')
 			else:
 				# Hostnames
 				domain_list.append(target)
+				# Add domain to inscope_domains.txt
 				with open(domain_scope_file, 'a') as file:
 					file.write(target + '\n')
 				print('[+] Writing domain ' + target + ' to scope')
-
 
 		# Sort both files to only have unique entries
 		print('[+] Sorting scope files by unique values')
@@ -129,30 +177,18 @@ class scope_parser:
 
 		return parsed_domains					
 
-
-	def parse_ip_range(self):
-		# Pretty sure I don't actually need to do this :D
-		return
-
-
-class scan:
-	def __init__(self, company):
-		self.company_name = company_name
-		if os.path.exists(os.path.expanduser('~') + '/bb') == False:
-			print('[+] Creating ~/bb directory')
-			os.mkdir(os.path.expanduser('~') + '/bb')
-		self.base_dir = '~/bb/'
-		self.company_dir = os.path.expanduser('~/bb/') + self.company_name
-		self.add_new_company()
-
-	def subdomain_enumeration():
-		return
-
-
-''' 
+	def subdomain_enumeration(input_file, output_dir):
+		input_file = self.company_dir + '/scope/wildcard_domains.txt'
+		# No parsing of the file neccesary in this situation!
+		subdomain_folder = company_dir + '/subdomain_enumeration'
+		timestamp_folder = self.company_dir + '/' + datetime.today().strftime('%Y%m%d')
+		# Run various subdomain scans (firstly just amass)
+		subprocess.Popen('', shell=True)
+		# Parse output into db - remove any out of scope 
+		# remove previous symlink from /current
+		# add new symlink for this scan
+		return 
 
 
 
-'''
-	
 

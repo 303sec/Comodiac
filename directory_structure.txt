@@ -1,0 +1,29 @@
+Company/
+    /discovered
+        /discovered_domains.txt
+        /discovered_ips.txt
+    /targets
+        /folder
+        /for
+        /each
+        /discovered
+        /host
+
+            /amass_passive
+                010119/(date stamped folders)
+            /amass_active
+            /masscan
+            /sublister
+            /aquatone
+            /eyewitness
+            /etc.
+            /latest (symlink to folder in /scans?)
+                /the .txt of each scan
+    /scope
+        inscope_domains.txt
+        outofscope_domains.txt
+        inscope_ips.txt
+        outofscope_ips.txt
+        wildcard_domains.txt
+        wildcard_fragments.txt
+

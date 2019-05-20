@@ -1,0 +1,34 @@
+{
+	"amass_active": {
+		"command":  "amass -active -brute -ip -src -d INPUT -oA OUTPUT -w WORDLIST",
+		"input": "scope/wildcard_domains.txt",
+		"wordlist": "/usr/share/wordlists/all.txt",
+		"category": "subdomain_enumeration",
+		"type": "domain"
+		},
+	"amass_passive": {
+		"command": "amass -passive -ip -src -df INPUT -oA OUTPUT",
+		"input": "scope/wildcard_domains.txt",
+		"category": "osint",
+		"type": "domain"
+		},
+	"aquatone": {
+		"command": "cat INPUT | aquatone -out OUTPUT",
+		"input": "scope/discovered_hosts.txt",
+		"category": "visual_enumeration",
+		"type": "both"
+		},
+	"masscan": {
+		"command": "masscan -p1-65535 INPUT --max-rate 1000 |& tee OUTPUT",
+		"input": "all_discovered_domains.txt",
+		"category": "port_scan",
+		"type": "ip"
+	},
+	"recursebuster": {
+		"command": "recursebuster -ajax -noui -clean -u INPUT -w WORDLIST -o OUTPUT",
+		"input": "",
+		"wordlist": "/usr/share/wordlists/all.txt",
+		"category": "content_discovery",
+		"type": "both"
+	}
+} 
