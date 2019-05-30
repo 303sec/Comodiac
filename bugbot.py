@@ -68,14 +68,6 @@ class bugbot:
 						# Make a folder for the scan, including the category
 						os.makedirs(tool_dir)
 
-
-
-			
-			
-
-
-
-
 	# @param scope: string: comma deliniated list of targets
 	# @param in_or_out: string: either 'in' or 'out', to determine if it is in or out of scope.
 	# @filesystem: adds the new hosts to in_scope_domains/ips.txt, sorts the file by unique entries.
@@ -120,6 +112,19 @@ class bugbot:
 		else:
 			# Probably a bad idea, but why return anything when it's out of scope?
 			return {}
+
+	def create_tool_table(self, target, tool, ):
+		conn = sqlite3.connect('')
+		c = conn.cursor()
+		# Create table for scan
+		c.execute('''CREATE TABLE ?
+             (date text, \
+             trans text, \
+             symbol text, \
+             qty real, \
+             price real )''')
+
+	def
 
 	# @param parsed_scope: list: list of parsed hosts. Default = get from local file 
 	def parse_wildcard_domains(self, parsed_scope=None):
@@ -177,12 +182,14 @@ class bugbot:
 
 		return parsed_domains					
 
-	def subdomain_enumeration(input_file, output_dir):
-		input_file = self.company_dir + '/scope/wildcard_domains.txt'
-		# No parsing of the file neccesary in this situation!
-		subdomain_folder = company_dir + '/subdomain_enumeration'
-		timestamp_folder = self.company_dir + '/' + datetime.today().strftime('%Y%m%d')
-		# Run various subdomain scans (firstly just amass)
+	def run_subdomain_enum(self, category, target):
+		with open('tools.json', 'r') as tools_file:
+			for tool, tool_options in tools.items():
+				if category == 'subdomain_enum':
+					output_dir = self.company_dir + '/targets/domain/' +  '/' + target + '/' + category + '/' + tool + '/' datetime.today().strftime('%d%m%Y')
+					output_file = output_file + '/' + datetime.now().strftime('%H%M%S') + '.txt'
+					
+
 		subprocess.Popen('', shell=True)
 		# Parse output into db - remove any out of scope 
 		# remove previous symlink from /current

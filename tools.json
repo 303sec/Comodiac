@@ -1,6 +1,14 @@
 {
 	"amass_active": {
-		"command":  "amass -active -brute -ip -src -d INPUT -oA OUTPUT -w WORDLIST",
+		"command": "amass -active -brute -ip -src -d INPUT -oA OUTPUT -w WORDLIST",
+		"input": "scope/wildcard_domains.txt",
+		"wordlist": "/usr/share/wordlists/all.txt",
+		"category": "subdomain_enumeration",
+		"type": "domain"
+		},
+	"massdns": {
+		"note": "Command not yet working",
+		"command": "python ~/tools/subbrute/subbrute.py /usr/share/wordlists/all.txt airbnb.com  | massdns -r /root/tools/massdns/ -t A -o -w ~/bb/airbnb/massdns.txt",
 		"input": "scope/wildcard_domains.txt",
 		"wordlist": "/usr/share/wordlists/all.txt",
 		"category": "subdomain_enumeration",
