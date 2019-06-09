@@ -9,99 +9,155 @@ import random
 import sqlite3
 
 
-class database:
+class bbdb:
 
     """
     @init: initialise the SQLite database and create tables if they don't exist
 
-    Creates/Uses Database: aava.db
-    # To be turned into a config file parameter.
+    Creates/Uses Database: {target}.db
+    in the directory: (company}/{target}/
 
     Scans Table:
 
-        ID:                    PRIMARY KEY
-        scan_name:             TEXT NOT NULL
-        scan_id:               TEXT NOT NULL
-        target_count:          INT NOT NULL
-        status:                TEXT NOT NULL
-        scan_uuid:             TEXT NOT NULL
-        start:                 INT
-        finish:                INT
-        cujo_engagement_id     INT
-        cujo_test_id           INT
-        error_alert            TEXT
-        nessus_file            TEXT
-
+    ID:                    PRIMARY KEY
+    asset_type:            TEXT NOT NULL
+    asset_content:         TEXT NOT NULL
+    scan_datetime:         DATE NOT NULL
+    ignore                 INT NOT NULL
 
     """
-    def __init__(self):
+    def __init__(self, company, target):
         # Check to see if the database exists. If not, create it.
-        self.db_name = 'aava.db'
-        connection = sqlite3.connect(self.db_name)
+        self.db = directory + '/' + database
+        connection = sqlite3.connect(self.db)
         cursor= connection.cursor();
-        # Check to see if the main CVE table exists. If not, create it.
+        # Check to see if the table exists. If not, create it.
         try:
-            cursor.execute('''CREATE TABLE Scans (
+            cursor.execute('''CREATE TABLE ? (
                 id INTEGER PRIMARY KEY,
-                scan_name TEXT NOT NULL,
-                scan_id TEXT NOT NULL,
-                scan_uuid TEXT NOT NULL,
-                chaos_id TEXT NOT NULL,
-                target_count INT NOT NULL,
-                status TEXT NOT NULL,
-                scan_status TEXT,
-                start INT,
-                finish INT,
-                cujo_engagement_id INT,
-                cujo_test_id INT,
-                error_alert TEXT,
-                nessus_file TEXT
-                 )''')
+                asset_type TEXT NOT NULL,
+                asset_content TEXT NOT NULL,
+                asset_category TEXT NOT NULL,
+                scan_datetime DATE NOT NULL
+                 )''', (target, ))
 
         except Exception as e:
             print(e)
 
+    # Note: the asset_list needs to be a list of tuples.
+    def add_assets(self, target, asset_list):
+        connection = sqlite3.connect(self.db)
+        cursor= connection.cursor();
+        # Should add given information into the database.
         try:
-            cursor.execute('''CREATE TABLE Archive (
-                id INTEGER PRIMARY KEY,
-                scan_name TEXT NOT NULL,
-                scan_id TEXT NOT NULL,
-                scan_uuid TEXT NOT NULL,
-                chaos_id TEXT NOT NULL,
-                target_count INT NOT NULL,
-                status TEXT NOT NULL,
-                scan_status TEXT,
-                start INT,
-                finish INT,
-                cujo_engagement_id INT,
-                cujo_test_id INT,
-                error_alert TEXT,
-                nessus_file TEXT
-                 )''')
+            cursor.executemany('INSERT INTO ? (asset_type, asset_content, asset_category, scan_datetime) VALUES (?, ?, ?, ?)',\
+                (asset_list))
+            connection.commit() 
+            connection.close()
+            return 0
+        except Exception as e:
+            print(e)
+            return -1
+        return 0
+
+    def add_asset(self, target, asset:dict):
+        connection = sqlite3.connect(self.db)
+        cursor= connection.cursor();
+        # Should add given information into the database.
+        try:
+            cursor.execute('INSERT INTO ? (asset_type, asset_content, asset_category, scan_datetime) VALUES (?, ?, ?, ?)',\
+                (asset['type'], asset['content'], asset['category'], asset['date']))
+            connection.commit() 
+            connection.close()
+            return 0
+        except Exception as e:
+            print(e)
+            return -1
+        return 0
+
+
+    # There is obviously a way to not just use 3 different functions, but I don't like making my sql queries too vague.
+    def get_assets_by_category(self, target, asset_category):
+        connection = sqlite3.connect(self.db)
+        connection.row_factory = sqlite3.Row
+        cursor= connection.cursor();
+        try:
+            cursor.execute('SELECT * FROM ? WHERE asset_category=?', (target, asset_category))
+            result = cursor.fetchall()
+            return [dict(row) for row in c.fetchall()]
 
         except Exception as e:
             print(e)
+            return -1
 
-    """
-    add_ava_scan_row: Creates a row according to data in input
+    def get_assets_by_type(self, target, asset_type):
+        connection = sqlite3.connect(self.db)
+        connection.row_factory = sqlite3.Row
+        cursor= connection.cursor();
+        try:
+            cursor.execute('SELECT * FROM ? WHERE asset_type=?', (target, asset_type))
+            return [dict(row) for row in cursor.fetchall()]
 
-    Adds: 
+        except Exception as e:
+            print(e)
+            return -1        
 
-    scan_data['scan_name']
-    scan_data['scan_id']
-    scan_data['chaos_id']
-    scan_data['target_count']
-    scan_data['status']
-    scan_data['start']
-    scan_data['end']
-    scan_data['scan_uuid']
+    def get_assets_by_content(self, target, asset_content):
+        connection = sqlite3.connect(self.db)
+        connection.row_factory = sqlite3.Row
+        cursor= connection.cursor();
+        try:
+            cursor.execute('SELECT * FROM ? WHERE asset_content=?', (target, asset_category))
+            return [dict(row) for row in cursor.fetchall()]
 
-    The dictionary passed in needs to have these parameters.
-    There is definitely a better way of doing this:
-    https://stackoverflow.com/questions/10913080/python-how-to-insert-a-dictionary-to-a-sqlite-database/10913280
-    The problem is, although it's more elegant it doesn't really work for the data we're using, and will take a while to implement.
+        except Exception as e:
+            print(e)
+            return -1
 
-    """
+
+    def get_assets_between_dates(self, target, start_date, end_date=None):
+        if end_date==None:
+            end_date = datetime.datetime.now()
+        connection = sqlite3.connect(self.db)
+        connection.row_factory = sqlite3.Row
+        cursor= connection.cursor();
+        try:
+            cursor.execute('SELECT * FROM ? WHERE scan_date BETWEEN ? AND ?', \
+                (target, start_time, end_time))
+            return [dict(row) for row in cursor.fetchall()]
+
+        except Exception as e:
+            print(e)
+            return -1
+
+        '''
+        SELECT *
+        FROM employees
+        WHERE scan_date BETWEEN '2014-01-01' AND '2014-12-31';
+        '''
+
+
+        """
+        add_ava_scan_row: Creates a row according to data in input
+
+        Adds: 
+
+        scan_data['scan_name']
+        scan_data['scan_id']
+        scan_data['chaos_id']
+        scan_data['target_count']
+        scan_data['status']
+        scan_data['start']
+        scan_data['end']
+        scan_data['scan_uuid']
+
+        The dictionary passed in needs to have these parameters.
+        There is definitely a better way of doing this:
+        https://stackoverflow.com/questions/10913080/python-how-to-insert-a-dictionary-to-a-sqlite-database/10913280
+        The problem is, although it's more elegant it doesn't really work for the data we're using, and will take a while to implement.
+
+        """ 
+
     # @param: scan_data: dict: key value pairs of items to be added to the database
     # @return int: 0 for success, non-zero for error.
     def add_ava_scan_row(self, scan_data:dict):

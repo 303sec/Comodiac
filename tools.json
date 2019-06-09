@@ -4,11 +4,13 @@
 		"input": "scope/wildcard_domains.txt",
 		"wordlist": "/usr/share/wordlists/all.txt",
 		"category": "subdomain_enumeration",
-		"type": "domain"
+		"type": "domain",
+		"parse_result": "",
+		"meta": "add_"
 		},
 	"massdns": {
 		"note": "Command not yet working",
-		"command": "python ~/tools/subbrute/subbrute.py /usr/share/wordlists/all.txt airbnb.com  | massdns -r /root/tools/massdns/ -t A -o -w ~/bb/airbnb/massdns.txt",
+		"command": "python ~/tools/subbrute/subbrute.py WORDLIST TARGET  | massdns -r /root/tools/massdns/ -t A -o -w OUTPUT",
 		"input": "scope/wildcard_domains.txt",
 		"wordlist": "/usr/share/wordlists/all.txt",
 		"category": "subdomain_enumeration",

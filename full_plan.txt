@@ -22,12 +22,19 @@ Available Commands:
 -h = show this help
 -v = verbose output
 +   +   +   +   +   +   +   
--c = Company Name
--t = Targets in scope (10.10.10.10,www.paypal.com,*.this.com)
--xt = Targets not in scope
--s = Schedule (hourly/daily/weekly) - Each tool should have a default schedule.
--i = immediately scan
--l = level of depth to the scanning:
+-c =            Company Name
+-t =            Targets in scope (10.10.10.10,www.paypal.com,*.this.com)
+-T =            File containing targets in scope
+-xt =           Targets not in scope
+-xT =           File containing targets not in scope
+-s =            Schedule (hourly/daily/weekly) - Each tool should have a default schedule.
+--cronscan =    A flag to use when the scan is part of the crontab.  
+-i =            immediately scan
+--sync =        sync (using rsync) with a remote. Pushes any new data and then pulls any new data.
+--cronsync =    Same as sync, but with the added option of adding to crontab.
+--uninstall =   prompt user for: remove all cron jobs? create a tar archive of all scans? remove all files and folders? 
+-l =            level of depth to the scanning:
+Based on the tool_category: OSINT, subdomain_enumeration, etc.
 1 - host discovery:
     - Get the IP addresses of all domains
     - Try to figure out IP address ownership
@@ -40,6 +47,24 @@ Available Commands:
     - wildcard domain fragment enumeration
     - Make sure to put anything that isn't in scope in the out_of_scope folder
 
+
+
+
+The useful thing about it being all wrapped up into a CLI means that it should be possible to create cron jobs for the command very easily. For example:
+
+bugbot --cronscan -c test -t 127.0.0.1 -i -l 1
+
+This would be the command to scan one of the hosts using level 1 (levels aren't quite decided on yet.)
+
+I think that the -i flag is required for adding a scheduled... Or maybe it is removed and it's just implied that it's always there.
+
+Only schedule a scan once the initial scan has worked and nothing broke.
+
+
+How do levels/ does selecting the tool_category work?
+
+Probably better to have a flag to pick category, and each category has an asociated number or letter.
+As each category has to have a function to do the scans anyway,
 
 
 Process =
@@ -67,6 +92,8 @@ CompanyName/
             ips.txt
 
 3 - Add all scoped domains / ips to the domains /ip folder
+
+4 - Parse any wildcard subdomain or domain fragments into separate files
 
 4 - Perform init scans on the new / initial entries based on the level given.
 
@@ -141,16 +168,6 @@ Requirement: An ideal command to use with placeholders:
 e.g.
 amass -active -brute -ip -src -d $domain -oA $dir/$domain
 
-Database Structure:
-
-DB for each discovered host within a bug bounty.
-DB for each subdomain for content discovery
-
-DB: Paypal
-Table: www.paypal.com
-Directory: $base/paypal/www.paypal.com/
-Timestamp | Live | IP  
-
 
 1 - Main logic:
 
@@ -167,17 +184,22 @@ Second idea: a JSON file with the commands stored in a dictionary-like format:
         'input': 
         },
     'amass_passive': 'amass -passive -ip -src -T TIME -ef OUTOFSCOPE -df SCOPE -oA DIR'
+    'parse_result': ''
 } 
 
-
+parse_result = the regular expression used to get each asset from the output file.
 
 Company/
-    /scans
+    /discovered
+        /discovered_domains.txt
+        /discovered_ips.txt
+    /targets
         /folder
         /for
         /each
         /discovered
         /host
+
             /amass_passive
                 010119/(date stamped folders)
             /amass_active
@@ -186,7 +208,7 @@ Company/
             /aquatone
             /eyewitness
             /etc.
-            /latest_scans (symlink to folder in /scans?)
+            /latest (symlink to folder in /scans?)
                 /the .txt of each scan
     /scope
         inscope_domains.txt
@@ -195,6 +217,7 @@ Company/
         outofscope_ips.txt
         wildcard_domains.txt
         wildcard_fragments.txt
+
 
 Initial scans:
 -i = immediately scan
@@ -214,6 +237,71 @@ remove file / store indefinitely on google drive
 
 
 '''
+
+
+============================================================================================
+DATABASE & ALERTING
+============================================================================================
+How the database and alerting will work:
+
+Database has it's own parse_new_data function, not neccesarily required to be called when a tool is run.
+Parsing the data comes in the form of reading the files and adding the results & file creation timestamp.
+This allows for a database to be generated with just files, as a kind of init function if needed.
+
+Each 'asset' is put into the table with a timestamp.
+asset = open port / subdomain / live ip address / endpoint
+
+For domains, we'll need to scan associated IP addresses & parse out any CDNs.
+
+For IP addresses, we need to do reverse DNS lookups and get extra hostnames
+
+e.g.
+Domains
+
+timestamp   {sql timestamp of scan}
+tool        {tool}
+IP          10.10.10.10
+port        none
+content     none
+endpoint    none
+screenshot  none
+
+create a timestamp table containing:
+tool | epoch_timestamp
+parse_todays_scans executed
+get all filenames in today's directory
+get the timestamp from the filenames
+compare the timestamps with the latest previous
+
+
+
+Alerting checks:
+
+New Port:
+select $discovered_port from $target where ip = $ip
+if it doesn't exist, alert on new port discovered.
+[Note: must parse out any CDN ports first.]
+
+New subdomain:
+select $discovered_hostname from $target
+if it doesn't exist, alert on new subdomain discovered.
+
+New IP address from known hostname:
+select * from $target where $discovered_ip = ip
+[Note: must parse out any CDN ports first.]
+
+New content discovered
+select * from $target where $discovered_content = content
+
+Content has changed
+Options:
+- Get 3-5 requests. Diff them, remove the difference. Hash the difference-less version
+- Screenshot, see if screenshot is different by x%
+
+
+
+===================================================================================================================
+===================================================================================================================
 
 
 # scrape subdomains
@@ -255,7 +343,7 @@ remove file / store indefinitely on google drive
 # linkfinder
 # jsparser
 
-# directory bruting: use gobuster
+# directory bruting: use gobuster ... recursebuster
 # Wordlists: robts.disallowed / robts.txt / raft / content_discovery_all.txt
 
 # Parraameter bruting: parameth
@@ -263,9 +351,9 @@ remove file / store indefinitely on google drive
 
 # exploits / testing
 # blind xs - bxss
-#idor - look for numerical parameters / hashes / email addresses
+# idor - look for numerical parameters / hashes / email addresses
 
-#subdomain takeover: can-itake-over-xyz
+# subdomain takeover: can-itake-over-xyz
 
 # cdn / waf bypass: find origin / find dev
 # origin.sub.domain.com / origin-sub.domain.com / pragma:akamai-x-get-true-cache-key

@@ -3,22 +3,41 @@ Company/
         /discovered_domains.txt
         /discovered_ips.txt
     /targets
-        /folder
-        /for
-        /each
-        /discovered
-        /host
-
-            /amass_passive
-                010119/(date stamped folders)
-            /amass_active
-            /masscan
-            /sublister
-            /aquatone
-            /eyewitness
-            /etc.
-            /latest (symlink to folder in /scans?)
-                /the .txt of each scan
+        /ip
+            /folder for every IP
+                /port_scans
+                    /nmap
+                    /masscan
+                /reverse_dns
+                    /whois(?)
+                /80
+                    /symlink to subdomain
+                /443
+                    /symlink to subdomain
+        /webservers
+            /symlink to every webserver found
+        /domain
+            /folder
+            /for
+            /each
+            /discovered
+            /host
+                /hostname.txt
+                    /osint
+                        /amass_passive
+                            010119/
+                        (date stamped folders)
+                    /subdomain_enumeration
+                        /amass_active
+                            010119/
+                            (date stamped folders)
+                    /masscan
+                    /sublister
+                    /aquatone
+                    /eyewitness
+                    /etc.
+                /latest (symlink to folder in /scans?)
+                    /the .txt of each scan
     /scope
         inscope_domains.txt
         outofscope_domains.txt

@@ -1,0 +1,54 @@
+To Do List
+
+
+
+Database - High priority
+- Create Database for company
+- Create table for each target
+- Figure out what to do about subdomain (nested) targets.
+	 - Conditional in the run_tool* functions.
+	 - If the category of the tool is subdomain_*, run extra functionality adding the subdomain to the discovered hosts.
+	 - Similar process for getting the IP address from a domain.
+	 - Similar process for reverse DNS
+	 - Basically any process that requires creating an extra discovered host to enumerate.
+- Parsing out results using GREPMONEY!
+- Enter data according to scan. e.g.
+{scan_time} | {tool} | {tool_output} | {alert}
+with tool_output being an asset.
+Assets are pieces of infomation discovered about the host. They can be:
+- Associated IP address
+- Open Ports
+- Discovered Content
+- Subdomain
+- Screenshot
+- Uptime check / IP discovery
+- 
+
+Performing Scans - Top Priority
+- Create functions for each of the scan types.
+- Test to make sure the commands themselves work
+- How to parse out scan results?
+
+
+Tools.json - Medium Priority
+- meta: for scans that require extra functionalty to perform on the found assets after the scan.
+	- add_domain = Adds the asset as a discovered domain
+	- add_ip = Adds the asset as a disovered IP
+	- create_asset_dir = Create a dir for the discovered asset
+	- publish_to_web = Haven't figured out details, but should be able to add to make some kind of symlink in var/www to this folder. 
+	- more would be useful!
+
+
+
+Folder Structure - Medium Priority
+-  Implementing the IP addresses and subdomain symlinked stuff
+- Structuring the folders appropriately.
+- Latest folder... ignore?
+
+Web Interface - Low priority
+- Login page
+- Create graphs for data
+- Display screenshots
+- Format areas each host/target appropriately
+- Probably build some kind of flask api, need to research.
+- Add new scans

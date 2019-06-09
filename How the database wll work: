@@ -1,0 +1,18 @@
+How the database wll work:
+
+ID:                    PRIMARY KEY
+asset_type:            TEXT NOT NULL
+asset_content:         TEXT NOT NULL
+scan_datetime:	       DATE NOT NULL
+
+
+We need functions for the following:
+
+# Add asset to db.
+# asset_type = port/ip/domain/content/etc.
+add_asset(asset_type, timestamp, asset_content)
+
+# Gets latest assets:
+# Gets a list of the latest assets, from given time to now (or a given end_time).
+get_latest_assets(asset_type, start_time, end_time)
+
