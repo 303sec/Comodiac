@@ -41,16 +41,59 @@ class bbdb:
         try:
             cursor.execute('''CREATE TABLE scan_info (
                 id INTEGER PRIMARY KEY,
-                scan_name TEXT NOT NULL,
+                scan_id TEXT NOT NULL,
+                scan_tool TEXT NOT NULL,
+                scan_catgory TEXT NOT NULL,
                 scan_command TEXT NOT NULL,
-                scan_started DATE NOT NULL,
+                scan_started DATE,
                 scan_completed DATE,
-                scan_pid TEXT NOT NULL,
+                scan_pid TEXT,
                 scan_status TEXT NOT NULL
                  )''')
 
         except Exception as e:
             print(e)
+
+        # Probably worth keeping info on targets in a table, but not important right now.
+
+
+    # scan_data contains:
+    # scan['id'] = target, scan name & timestamp concatenated
+    # scan['tool']
+    # scan['command']
+    # scan['started']
+    # // scan['pid'] - Added 
+    # scan['status'] (always waiting when adding the scan.)
+    def add_scan(target, scan_data:dict):
+        connection = sqlite3.connect(self.db_name)
+        cursor= connection.cursor();
+        # Should add given information into the database.
+        try:
+            cursor.execute('INSERT INTO ? (scan_id, scan_tool, scan_category, scan_command, scan_status) VALUES (?, ?, ?, ?, ?)',\
+                (target, scan['id'], scan['tool'], scan['command'], scan['category'], scan['status']))
+            connection.commit() 
+            connection.close()
+            return 0
+        except Exception as e:
+            print(e)
+            return -1
+        return 0
+
+    def start_scan(target, scan_data:dict):
+        connection = sqlite3.connect(self.db_name)
+        cursor= connection.cursor();
+        # Should add given information into the database.
+        try:
+            cursor.execute('UPDATE ? SET scan_pid=?, scan_started=?, scan_status=?) WHERE scan_id=?',\
+                (target, scan_data['pid'], scan_data['started'], scan_data['status'], scan_data['id']))
+            connection.commit() 
+            connection.close()
+            return 0
+        except Exception as e:
+            print(e)
+            return -1
+        return 0
+
 
     """
     @create_target_table: create tables for targets
@@ -100,6 +143,21 @@ class bbdb:
         try:
             cursor.executemany('INSERT INTO ? (asset_type, asset_content, asset_category, scan_datetime) VALUES (?, ?, ?, ?)',\
                 (asset_list))
+            connection.commit() 
+            connection.close()
+            return 0
+        except Exception as e:
+            print(e)
+            return -1
+        return 0
+
+    def add_asset(self, target, asset:dict):
+        connection = sqlite3.connect(self.db_name)
+        cursor= connection.cursor();
+        # Should add given information into the database.
+        try:
+            cursor.execute('INSERT INTO ? (asset_type, asset_content, asset_category, scan_datetime) VALUES (?, ?, ?, ?)',\
+                (asset['type'], asset['content'], asset['category'], asset['date']))
             connection.commit() 
             connection.close()
             return 0
@@ -183,6 +241,19 @@ class bbdb:
         FROM employees
         WHERE scan_date BETWEEN '2014-01-01' AND '2014-12-31';
         '''
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         """

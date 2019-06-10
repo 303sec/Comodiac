@@ -23,9 +23,7 @@ class bugbot:
 		self.base_dir = '~/bb/'
 		self.company_dir = os.path.expanduser('~/bb/') + self.company_name
 		self.add_new_company()
-		if target != None:
-			self.bbdb = bbdb.bbdb(self.company_dir, target)
-
+		
 	def add_new_company(self):
 		if os.path.exists(self.company_dir):
 			print('[+] Company directory found')
@@ -38,6 +36,7 @@ class bugbot:
 			os.mkdir(self.company_dir + '/targets/ips')
 			os.mkdir(self.company_dir + '/targets/domains')
 			os.mkdir(self.company_dir + '/notes')
+			self.bbdb = bbdb.bbdb(self.company_name, self.company_dir)
 		return 
 
 	# This function has been basically tested, but not much. Seems to work.
@@ -55,8 +54,7 @@ class bugbot:
 	# We run this function on any discovered subdomains / live IP addresses
 	# @filesystem: writes all the relevant tools to the ip or domain folder in the given target
 	# @param: target: string: the name of the target in which to create the folder for. If wildcard!=false, then this is the host target.
-	# This param has been replace with a function. @param: ip_or_domain: string: either 'ip' or 'domain', depending on what type the target is.
-	# @param: wildcard: string: default=None: a sting of the discovered subdomain to be initialised, using target as the 'host' .
+	# @param: wildcard_root: string: default=None: a sting of the discovered subdomain to be initialised, using target as the 'host' .
 
 	# This function needs some work, and is important:
 	# Needs to:
@@ -66,18 +64,22 @@ class bugbot:
 	- Add target to discovered_hosts.txt
 	- (maybe) add target to a base db.
 	'''
-	def setup_target_folder(self, target, wildcard=None):
+	def add_new_target(self, target, wildcard_root=None):
+		# Create the table in the company db
+		bbdb.create_target_table(target)
+		# Avoid any silly dir issues
 		target = target.replace('/', '-')
-		# mkdir ~/bb/COMPANY/targets/domains||ips/TARGET
 		if wildcard == None:
 			target_dir = self.company_dir + '/targets/' + ip_or_domain(target) + 's/' + target
-		target_dir = self.company_dir + '/targets/' + ip_or_domain(target) + 's/' + target + '/' + wildcard
+		target_dir = self.company_dir + '/targets/' + ip_or_domain(target) + 's/' + wildcard_root + '/' + target
 
 		if os.path.exists(target_dir) == False:
 				os.makedirs(target_dir)
 
+
+
 		# This whole part feels redundant, like it'd surely be done when the scan runs?
-		# Still might be a useful snippet.
+		# Still might be a useful snippet, so I haven't deleted it.
 		'''
 		if '*' in target or '*' in wildcard:
 			with open('tools.json', 'r') as tools_file:
@@ -228,32 +230,82 @@ class bugbot:
 		# add new symlink for this scan
 		return 
 
-	def exec(command):
+	# scan_data:
+	# scan_data['tool']
+	# scan_data['category']
+	# scan_data['command']
+	# scan_data['output']
+
+	def exec(target, scan_data:dict):
 		# This command will essentially be run as it's own process.
-		# Executing commands: Most Important!
-		# We need to make sure there are no errors from the shell command.
-		# This can be achieved by checking there's nothing in the STDERR (possibly) and that it returns a status code of 0.
-		# Needs to be non-blocking. All of the processes need to be run with Popen, and then polled for when they return success
-		# Possibly need to use async/await? 
-		# Probably worth creating a table in either a company or root db to store process PIDs to keep track of processes.
-		# Could also just have it blocking. Why not? Probably a good way of not completely overwhelming everything. 
-		process = subprocess.Popen(shlex.split(command), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		# Create scan dict containing:
+		# scan['id'] = target, scan name & timestamp concatenated
+    	# scan['tool']
+    	# scan['command']
+    	# scan['started']
+    	# scan['pid'] - Later 
+    	# scan['status'] 
+    	scan_id = scan_data['target'].strip() + scan_data['tool'] + datetime.timestamp(datetime.now())
+    	scan = {'scan_id': scan_id, 'tool': scan_data['tool'], 'category': scan_data['category'], 'command', scan_data['command'], 'status': 'waiting', 'output': scan_data['output']}
+		
+    	bbdb.add_scan(target, scan)
+		process = subprocess.Popen(shlex.split(scan_data['command']), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		# Below could be used later for printing output to web interface.
+		output = process.stdout.read()
+		scan['pid'] = process.pid
+		scan['status'] = 'started'
+		scan['started'] = datetime.timestamp(datetime.now())
+		bbdb.start_scan(target,scan_data['output'])
+		process.wait()
 
-
+		# Next we need to read the output file and parse it accordingly.
+		outfile_assets = self.parse_output_file(scan['tool'])
+		bbdb.add_asset()
+		bbdb.add_assets() # List of tuples
 
 		return result 
+
+
+		#0 - Have an 'executor' script/CLI functionality to handle scans/processes, doing the following:
+		#1 - Adds scan info to the target db in a table called 'live_scans' or something equally appropriate.
+		#1 - Uses a blocking Popen, starttime/scan endtime PID and any errors. 
+		#2 - The followng is a rough idea for the live_scans table:
+		#	ID:                   PRIMARY KEY
+		#    scan_name:            TEXT NOT NULL
+		#    scan_command:         TEXT NOT NULL
+		#    scan_started:         DATE NOT NULL
+		#    scan_completed:		  DATE
+		#    scan_pid:			  TEXT NOT NULL
+		#    scan_status:		  TEXT NOT NULL
+		#
+		#3 - scan_status can be:
+		#waiting
+		#running
+		#completed
+		#error
+		#parsed
+		#(more can be added if needed)
+		#
+		#4 - Once a scan is complete, it parses the output of the scans within the script with the BB functionality.
+		#5 - Once scan is completed and parsed, runs a bb_alert tool to look over database history and see if there has been any change.
+		#6 - Quite likely worth having slack chats dedicated to progress monitoring - like a room for errors, a room for completed scans, a room for started scans.
+		#7 - Can take an input of multiple tools at once, to run them all in a blocking fashion in a loop to keep processing down.
+		#8 - Possible later feature: run scans as either blocking or async!
+
+
 					
 		
 
 
-
-	def parse_output_file(self, target, file, tool):
+	# Return a list of tuples ready for putting into the database.
+	def parse_output_file(self, file, tool):
 		with open('tools.json', 'r') as tools_file:
 			for tool_name, tool_options in tools_file.items():
 				if tool_name == tool:
 					file_directory = self.company_dir + '/targets/domain/' +  '/' + target + '/' + category + '/'
 					with open(target):
 						re.findall(tool_options['parse_result'])
+			# os.path.getmtime = Check the time the file was edited last.
 						
 
 '''
