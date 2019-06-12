@@ -57,13 +57,12 @@ class bbdb:
         # Probably worth keeping info on targets in a table, but not important right now.
 
 
-    # scan_data contains:
-    # scan['id'] = target, scan name & timestamp concatenated
-    # scan['tool']
-    # scan['command']
-    # scan['started']
-    # // scan['pid'] - Added 
-    # scan['status'] (always waiting when adding the scan.)
+    # @param: scan_data: dict: containing:
+    #   scan['id'] = target, scan name & timestamp concatenated
+    #   scan['tool']
+    #   scan['command']
+    #   scan['category']
+    #   scan['status'] == waiting
     def add_scan(target, scan_data:dict):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
@@ -79,6 +78,12 @@ class bbdb:
             return -1
         return 0
 
+    # @param: target: string: name of the target to update information
+    # @param: scan_data: dict: containing:
+    #   scan['pid']
+    #   scan['started']
+    #   scan['status'] == started
+    #   scan['id']
     def start_scan(target, scan_data:dict):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();

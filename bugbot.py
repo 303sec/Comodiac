@@ -202,7 +202,7 @@ class bugbot:
 				# Write scannable wildcard domains to file
 				file.write(domain + '\n')
 				
-		# Make sure the files don't have any repeats... this is not a good way of doing this.
+		# Make sure the files don't have any repeats... also this is not a good way of doing this.
 		print('[+] Sorting the wildcard domains & fragments by unique')
 		subprocess.Popen('sort -u ' + wildcard_domain_file + ' > ' + wildcard_domain_file + '.tmp && mv ' + wildcard_domain_file + '.tmp ' + wildcard_domain_file, shell=True)	
 		subprocess.Popen('sort -u ' + wildcard_fragment_file + ' > ' + wildcard_fragment_file + '.tmp && mv ' + wildcard_fragment_file + '.tmp ' + wildcard_fragment_file, shell=True)	
@@ -238,7 +238,7 @@ class bugbot:
 
 	def exec(target, scan_data:dict):
 		# This command will essentially be run as it's own process.
-		# Create scan dict containing:
+		# Need a scan dict containing:
 		# scan['id'] = target, scan name & timestamp concatenated
     	# scan['tool']
     	# scan['command']
@@ -255,12 +255,16 @@ class bugbot:
 		scan['pid'] = process.pid
 		scan['status'] = 'started'
 		scan['started'] = datetime.timestamp(datetime.now())
-		bbdb.start_scan(target,scan_data['output'])
-		process.wait()
+		bbdb.start_scan(target,scan)
+		# blocks processing until command is complete
+		stdout, stderr = process.communicate()
 
-		# Next we need to read the output file and parse it accordingly.
-		outfile_assets = self.parse_output_file(scan['tool'])
-		bbdb.add_asset()
+		if process.returncode != 0:
+			scan['status'] = 'error'
+
+		# Now we need to read the output file and parse it accordingly.
+		outfile_assets = self.parse_output_file(scan['output'], scan['tool'])
+		bbdb.add_asset() # for each asset
 		bbdb.add_assets() # List of tuples
 
 		return result 
@@ -270,13 +274,13 @@ class bugbot:
 		#1 - Adds scan info to the target db in a table called 'live_scans' or something equally appropriate.
 		#1 - Uses a blocking Popen, starttime/scan endtime PID and any errors. 
 		#2 - The followng is a rough idea for the live_scans table:
-		#	ID:                   PRIMARY KEY
+		#	 id:                   PRIMARY KEY
 		#    scan_name:            TEXT NOT NULL
 		#    scan_command:         TEXT NOT NULL
 		#    scan_started:         DATE NOT NULL
-		#    scan_completed:		  DATE
-		#    scan_pid:			  TEXT NOT NULL
-		#    scan_status:		  TEXT NOT NULL
+		#    scan_completed:	   DATE
+		#    scan_pid:			   TEXT NOT NULL
+		#    scan_status:		   TEXT NOT NULL
 		#
 		#3 - scan_status can be:
 		#waiting
@@ -297,7 +301,7 @@ class bugbot:
 		
 
 
-	# Return a list of tuples ready for putting into the database.
+	# Should return a list of tuples ready for putting into the database.
 	def parse_output_file(self, file, tool):
 		with open('tools.json', 'r') as tools_file:
 			for tool_name, tool_options in tools_file.items():
