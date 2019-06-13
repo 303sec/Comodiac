@@ -122,6 +122,11 @@ class bbdb:
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Check to see if the table exists. If not, create it.
+
+        # tables can't be made with parameterized statments like this.
+        # We're going to have to add the target as a value to the main database
+        # At this point we might as well only have one database and a table per company.
+        # ... though wouldn't that just be the same problem?
         try:
             cursor.execute('''CREATE TABLE ? (
                 id INTEGER PRIMARY KEY,

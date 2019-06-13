@@ -12,7 +12,8 @@ from datetime import datetime
 import time
 import bbdb
 import shlex
-# Refactoring note: I did not know about os.makedirs() when doing this, so there's a bunch of redundant code.
+import _thread
+ 
 
 class bugbot:
 	def __init__(self, company_name, target=None):
@@ -25,6 +26,7 @@ class bugbot:
 		self.add_new_company()
 		
 	def add_new_company(self):
+		self.db = bbdb.bbdb(self.company_name, self.company_dir)
 		if os.path.exists(self.company_dir):
 			print('[+] Company directory found')
 			return 
@@ -36,7 +38,6 @@ class bugbot:
 			os.mkdir(self.company_dir + '/targets/ips')
 			os.mkdir(self.company_dir + '/targets/domains')
 			os.mkdir(self.company_dir + '/notes')
-			self.bbdb = bbdb.bbdb(self.company_name, self.company_dir)
 		return 
 
 	# This function has been basically tested, but not much. Seems to work.
@@ -66,12 +67,13 @@ class bugbot:
 	'''
 	def add_new_target(self, target, wildcard_root=None):
 		# Create the table in the company db
-		bbdb.create_target_table(target)
+		self.db.create_target_table(target)
 		# Avoid any silly dir issues
 		target = target.replace('/', '-')
-		if wildcard == None:
-			target_dir = self.company_dir + '/targets/' + ip_or_domain(target) + 's/' + target
-		target_dir = self.company_dir + '/targets/' + ip_or_domain(target) + 's/' + wildcard_root + '/' + target
+		if wildcard_root == None:
+			target_dir = self.company_dir + '/targets/' + self.ip_or_domain(target) + 's/' + target
+		else:
+			target_dir = self.company_dir + '/targets/' + self.ip_or_domain(target) + 's/' + wildcard_root + '/' + target
 
 		if os.path.exists(target_dir) == False:
 				os.makedirs(target_dir)
@@ -209,35 +211,51 @@ class bugbot:
 
 		return parsed_domains
 
+	# Need to create a scan dict containing:
+	# scan['id'] = target, scan name & timestamp concatenated
+	# scan['tool']
+	# scan['command']
+	# scan['started']
+	# scan['pid'] - Later 
+	# scan['status'] 
 	def run_tools_by_category(self, category, target, wordlist='default'):
 		with open('tools.json', 'r') as tools_file:
 			for tool, tool_options in tools.items():
-
 				if category == tool_options['category']:
 					output_dir = self.company_dir + '/targets/' + self.ip_or_domain(target) +  '/' + target + '/' + category + '/' + tool + '/' + datetime.today().strftime('%d%m%Y')
 					output_file = output_dir + '/' + tool + '.' + time.time()
 					# Check that the tool actually uses a wordlist
 					if 'WORDLIST' in tool_options['command']:
-						# If not wordlist supplied, use the wordlist in the 
+						# If no wordlist supplied, use the wordlist given as a param
 						if wordlist == 'default':
 							wordlist = tool_options['wordlist']
 					# Replaces the placeholders in the scan.
 					command = tool_options['command'].replace('INPUT', target).replace('OUTPUT', output_file).replace('WORDLIST', wordlist)
-					# Runs the process in the background, no output or input in the script
-					exec(command)
-		# Parse output into db - remove any out of scope 
-		# remove previous symlink from /current
-		# add new symlink for this scan
+					# This should really popen another command, not call exec(). For the time being though (and testing) it stays.
+					scan_id = target.strip() + tool + datetime.timestamp(datetime.now())
+					scan_data = {'category': category, 'tool': tool, 'command': command, 'output': output_file, 'scan_id': scan_id, 'status': 'waiting'}
+					# Add the scan to db (before the threading stuff comes into play)
+					self.db.add_scan(target, scan)
+					# This should launch the command into a different thread!
+					_thread.start_new_thread(run_cmd, (target, scan_data))
+
 		return 
 
 	# scan_data:
-	# scan_data['tool']
-	# scan_data['category']
-	# scan_data['command']
-	# scan_data['output']
+	#	scan_id
+	# 	tool
+	# 	category
+	# 	command
+	# 	output
+	#	pid
+	#	status
+	#	id
+	#
+	#
 
-	def exec(target, scan_data:dict):
-		# This command will essentially be run as it's own process.
+
+	def run_cmd(target, scan:dict):
+		# This command will essentially be run as it's own process via _thread
 		# Need a scan dict containing:
 		# scan['id'] = target, scan name & timestamp concatenated
     	# scan['tool']
@@ -245,17 +263,15 @@ class bugbot:
     	# scan['started']
     	# scan['pid'] - Later 
     	# scan['status'] 
-    	scan_id = scan_data['target'].strip() + scan_data['tool'] + datetime.timestamp(datetime.now())
-    	scan = {'scan_id': scan_id, 'tool': scan_data['tool'], 'category': scan_data['category'], 'command', scan_data['command'], 'status': 'waiting', 'output': scan_data['output']}
-		
-    	bbdb.add_scan(target, scan)
+    	
+    	
 		process = subprocess.Popen(shlex.split(scan_data['command']), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		# Below could be used later for printing output to web interface.
 		output = process.stdout.read()
 		scan['pid'] = process.pid
 		scan['status'] = 'started'
 		scan['started'] = datetime.timestamp(datetime.now())
-		bbdb.start_scan(target,scan)
+		self.db.start_scan(target,scan)
 		# blocks processing until command is complete
 		stdout, stderr = process.communicate()
 
@@ -263,9 +279,17 @@ class bugbot:
 			scan['status'] = 'error'
 
 		# Now we need to read the output file and parse it accordingly.
+		'''
+
+		TODO
+
 		outfile_assets = self.parse_output_file(scan['output'], scan['tool'])
 		bbdb.add_asset() # for each asset
 		bbdb.add_assets() # List of tuples
+		'''
+		# Parse output into db - remove any out of scope 
+		# remove previous symlink from /current
+		# add new symlink for this scan
 
 		return result 
 
