@@ -128,7 +128,7 @@ class bbdb:
         # At this point we might as well only have one database and a table per company.
         # ... though wouldn't that just be the same problem?
         try:
-            cursor.execute('''CREATE TABLE ? (
+            cursor.execute('''CREATE TABLE scan (
                 id INTEGER PRIMARY KEY,
                 asset_type TEXT NOT NULL,
                 asset_content TEXT NOT NULL,
@@ -176,7 +176,7 @@ class bbdb:
             return -1
         return 0
 
-    def add_asset(self, target, asset:dict):
+    def add_assets(self, target, asset:dict):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Should add given information into the database.
@@ -253,7 +253,10 @@ class bbdb:
         '''
 
 
-
+    # @param: string: table name to remove any non 0-9 a-z, . or - characters from
+    # @return: a 'scrubbed' table name with everything bad removed. Hopefully.
+    def scrub(table_name):
+        return ''.join( chr for chr in table_name if re.match('[0-9a-zA-Z\.\-]', chr) )
 
 
 

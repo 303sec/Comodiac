@@ -26,7 +26,6 @@ class bugbot:
 		self.add_new_company()
 		
 	def add_new_company(self):
-		self.db = bbdb.bbdb(self.company_name, self.company_dir)
 		if os.path.exists(self.company_dir):
 			print('[+] Company directory found')
 			return 
@@ -38,6 +37,7 @@ class bugbot:
 			os.mkdir(self.company_dir + '/targets/ips')
 			os.mkdir(self.company_dir + '/targets/domains')
 			os.mkdir(self.company_dir + '/notes')
+			self.db = bbdb.bbdb(self.company_name, self.company_dir)
 		return 
 
 	# This function has been basically tested, but not much. Seems to work.
