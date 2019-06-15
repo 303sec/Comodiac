@@ -1,0 +1,10 @@
+To Do List - Micro
+
+1 - Reconsider database structure:
+	- Should we only have one database?
+	YES! This is almost certainly best practice.
+	- Which means that we need to add a target and company field to the assets.
+	And any other relevant metadata, probably.
+	- So how do we do it?
+	Firstly, we don't need to create databases and tables as often.
+	Basically starting the bbdb script again, but with new knowledge.

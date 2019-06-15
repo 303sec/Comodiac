@@ -218,6 +218,11 @@ class bugbot:
 	# scan['started']
 	# scan['pid'] - Later 
 	# scan['status'] 
+
+	# @param: category: string: categroy of the scan, to be parsed from tools.json
+	# @param: target: string: the name of the target
+	# @param: wordlist: string: default='default': path to a wordlist, if applicable.
+	#
 	def run_tools_by_category(self, category, target, wordlist='default'):
 		with open('tools.json', 'r') as tools_file:
 			for tool, tool_options in tools.items():
@@ -238,8 +243,7 @@ class bugbot:
 					self.db.add_scan(target, scan)
 					# This should launch the command into a different thread!
 					_thread.start_new_thread(run_cmd, (target, scan_data))
-
-		return 
+		return 0
 
 	# scan_data:
 	#	scan_id
