@@ -1,8 +1,6 @@
 To Do List - Macro
 
 Database - High priority
-- Create Database for company
-- Create table for each target
 - Figure out what to do about subdomain (nested) targets.
 	 - Conditional in the run_tool* functions.
 	 - If the category of the tool is subdomain_*, run extra functionality adding the subdomain to the discovered hosts.
@@ -27,6 +25,10 @@ Performing Scans - Top Priority
 - Test to make sure the commands themselves work
 - How to parse out scan results?
 
+Alerting - Medium priority
+- functions to be called whenever a new scan takes place. NOT on a cron job, probably.
+	- Need correct db functions to make work
+- slack channel integration (should be simple enough)
 
 Tools.json - Medium Priority
 - meta: for scans that require extra functionalty to perform on the found assets after the scan.
@@ -51,6 +53,4 @@ Web Interface - Low priority
 - Probably build some kind of flask api, need to research.
 - Add new scans
 
-
-In progress / Current To Do:
 

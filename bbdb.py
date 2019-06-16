@@ -53,23 +53,26 @@ class bbdb:
         # Check to see if the database exists. If not, create it.
         self.company = company
         self.db_name = base_dir + '/bb.db'
+        print('[+] Creating database at', self.db_name)
         connection = sqlite3.connect(self.db_name)
+
         cursor= connection.cursor();
         # Create the scan_info table for the company
         try:
             cursor.execute('''CREATE TABLE scan_info (
                 id INTEGER PRIMARY KEY,
                 company TEXT NOT NULL,
-                target TEXT, NOT NULL,
+                target TEXT NOT NULL,
                 scan_id TEXT NOT NULL,
                 scan_tool TEXT NOT NULL,
-                scan_catgory TEXT NOT NULL,
+                scan_category TEXT NOT NULL,
                 scan_command TEXT NOT NULL,
+                scan_outfile TEXT,
                 scan_started DATE,
                 scan_completed DATE,
                 scan_pid TEXT,
-                scan_status TEXT NOT NULL,
-                 )''')
+                scan_status TEXT NOT NULL
+                )''')
         except Exception as e:
             print(e)
         # Create the asset table
@@ -84,8 +87,9 @@ class bbdb:
                 scan_datetime DATE NOT NULL,
                 scan_id INTEGER NOT NULL,
                 ignore INTEGER NOT NULL
-                 )''', (target, ))
-            return 0
+                )''')
+        except Exception as e:
+            print(e)
 
 
     # @param: scan_data: dict: containing:
@@ -94,17 +98,18 @@ class bbdb:
     #   scan['command']
     #   scan['category']
     #   scan['status'] == waiting
-    def add_scan(target, scan_data:dict):
+    def add_scan(self, target, scan_data:dict):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
             cursor.execute('INSERT INTO scan_info (target, company, scan_id, scan_tool, scan_category, scan_command, scan_status) VALUES (?, ?, ?, ?, ?, ?, ?)',\
-                (target, self.company, scan['id'], scan['tool'], scan['command'], scan['category'], scan['status']))
+                (target, self.company, scan_data['scan_id'], scan_data['tool'], scan_data['command'], scan_data['category'], scan_data['status']))
             connection.commit() 
             connection.close()
             return 0
         except Exception as e:
+            print('[-] Database error in add_scan:')
             print(e)
             return -1
         return 0
@@ -115,24 +120,38 @@ class bbdb:
     #   scan['started']
     #   scan['status'] == started
     #   scan['id']
-    def start_scan(target, scan_data:dict):
+    def start_scan(self, target, scan_data:dict):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
-            cursor.execute('UPDATE scan_info SET scan_pid=?, scan_started=?, scan_status=?) WHERE scan_id=? AND target=? AND company=?',\
-                (target, scan_data['pid'], scan_data['started'], scan_data['status'], scan_data['id'], target, self.company))
+            cursor.execute('UPDATE scan_info SET scan_pid=?, scan_started=?, scan_status=?, scan_outfile=? WHERE scan_id=? AND target=? AND company=?',\
+                (scan_data['pid'], scan_data['started'], scan_data['status'], scan_data['output'], scan_data['scan_id'], target, self.company))
             connection.commit() 
             connection.close()
             return 0
         except Exception as e:
+            print('[-] Database error in start_scan:')
             print(e)
             return -1
         return 0
 
 
-
-
+    def scan_complete(self, target, scan_data:dict):
+        connection = sqlite3.connect(self.db_name)
+        cursor= connection.cursor();
+        # Should add given information into the database.
+        try:
+            cursor.execute('UPDATE scan_info SET scan_completed=?, scan_status=? WHERE scan_id=? AND target=? AND company=?',\
+                (scan_data['completed'], scan_data['status'], scan_data['scan_id'], target, self.company))
+            connection.commit() 
+            connection.close()
+            return 0
+        except Exception as e:
+            print('[-] Database error in start_scan:')
+            print(e)
+            return -1
+        return 0
 
 
     # Note: the asset_list needs to be a 
@@ -149,6 +168,7 @@ class bbdb:
             connection.close()
             return 0
         except Exception as e:
+            print('[-] Database error in add_assets:')
             print(e)
             return -1
         return 0
@@ -165,6 +185,7 @@ class bbdb:
             connection.close()
             return 0
         except Exception as e:
+            print('[-] Database error in add_asset:')
             print(e)
             return -1
         return 0
@@ -233,7 +254,7 @@ class bbdb:
     # @param: string: table name to remove any non 0-9 a-z, . or - characters from
     # @return: a 'scrubbed' table name with everything bad removed. Hopefully.
     # Not sure we need this anymore.
-    def scrub(table_name):
+    def scrub(self, table_name):
         return ''.join( chr for chr in table_name if re.match('[0-9a-zA-Z\.\-]', chr) )
 
 

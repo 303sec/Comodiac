@@ -3,7 +3,7 @@
 		"command": "nmap -sP INPUT -oG OUTPUT",
 		"category": "uptime_monitor",
 		"type": "both",
-		"parse_result": "",
+		"parse_result": ""
 		},
 	"amass_active": {
 		"command": "amass -active -brute -ip -src -d INPUT -oA OUTPUT -w WORDLIST",
