@@ -318,18 +318,23 @@ class bugbot:
         # Below could be used later for printing output to web interface.
         scan['pid'] = process.pid
         scan['status'] = 'started'
-        scan['started'] = datetime.timestamp(datetime.now())
+        scan['started'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.db.start_scan(target,scan)
         # blocks processing until command is complete
         stdout, stderr = process.communicate()
+        
 
         if process.returncode != 0:
             scan['status'] = 'error'
+            scan['completed'] = ''
+        else:
+        	scan['status'] = 'completed'
+        	scan['completed'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-
+        self.bbdb.scan_complete(target, scan)
         outfile_assets = self.parse_output_file(scan['output'], scan['tool'])
-        bbdb.add_asset() # for each asset
-        bbdb.add_assets() # List of tuples
+        self.bbdb.add_asset() # for each asset
+        self.bbdb.add_assets() # List of tuples
         '''
         # Parse output into db - remove any out of scope 
         # remove previous symlink from /current
@@ -364,7 +369,7 @@ class bugbot:
         #7 - Can take an input of multiple tools at once, to run them all in a blocking fashion in a loop to keep processing down.
         #8 - Possible later feature: run scans as either blocking or async!
 
-
+'''
                     
         
 
@@ -379,7 +384,6 @@ class bugbot:
                         re.findall(tool_options['parse_result'])
             # os.path.getmtime = Check the time the file was edited last.
                         
-
 '''
 Useful snippet to get latest file in dir:
     file_directory = self.company_dir + '/targets/domain/' +  '/' + target + '/' + category + '/' + tool + '/' datetime.today().strftime('%d%m%Y')

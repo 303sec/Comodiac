@@ -17,7 +17,7 @@ class bbdb:
     Creates Database: {company}.db
     in the directory: ~/bb/{company}
 
-    Creates table: scan_info: containing meta info about running scans
+    Creates table: scan_info: containing info on running scans
 
     scan_info Table:
 
@@ -29,13 +29,14 @@ class bbdb:
     scan_category:        TEXT NOT NULL
     scan_command:         TEXT NOT NULL
     scan_started:         DATE NOT NULL
+    scan_outfile          TEXT
     scan_completed:       DATE
     scan_pid:             TEXT NOT NULL
     scan_status:          TEXT NOT NULL
 
         Uses Database: {company}.db
 
-    Scans Table:
+    assets Table:
 
     id:                   PRIMARY KEY
     target:               TEXT NOT NULL
@@ -45,6 +46,32 @@ class bbdb:
     scan_datetime:        DATE NOT NULL
     scan_id               INTEGER NOT NULL
     ignore                INT NOT NULL
+
+
+    Creates table: schedule_info: containing info on information on scheduled scans
+    schedule_info table:
+
+    id                  INTEGER PRIMARY KEY,
+    target              TEXT NOT NULL,
+    company             TEXT NOT NULL,
+    schedule            TEXT NOT NULL,
+    # schedule (cron style?)
+    tools               TEXT,
+    # Contains a comma delimited list of tools to use. 
+    categories          TEXT,
+    # Contains a comma delimited list of tools to use from given categories. 
+    wordlist            TEXT,
+    last_run            DATE,
+    last_scan_id        INTEGER,
+    infile              TEXT NOT NULL,
+    intype              TEXT NOT NULL,
+    # can be set to either file or asset
+    # file = filename = input. asset = every line of file = input.
+    outfile             TEXT NOT NULL,
+    parser              TEXT NOT NULL,
+    meta                TEXT
+
+
 
 
     """
@@ -90,6 +117,27 @@ class bbdb:
                 )''')
         except Exception as e:
             print(e)
+
+        try:
+            cursor.execute('''CREATE TABLE schedule_info (
+                id INTEGER PRIMARY KEY,
+                target TEXT NOT NULL,
+                company TEXT NOT NULL,
+                schedule TEXT NOT NULL,
+                infile TEXT NOT NULL,
+                intype TEXT NOT NULL,
+                outfile TEXT NOT NULL
+                parser TEXT NOT NULL,
+                tools TEXT,
+                categories TEXT,
+                wordlist TEXT,
+                last_run DATE,
+                last_scan_id INTEGER,
+                meta TEXT
+                )''')
+        except Exception as e:
+            print(e)
+
 
 
     # @param: scan_data: dict: containing:
