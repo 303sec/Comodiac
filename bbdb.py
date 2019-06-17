@@ -63,6 +63,7 @@ class bbdb:
     wordlist            TEXT,
     last_run            DATE,
     last_scan_id        INTEGER,
+    next_run            DATE,
     infile              TEXT NOT NULL,
     intype              TEXT NOT NULL,
     # can be set to either file or asset
@@ -308,5 +309,70 @@ class bbdb:
 
 
 
+'''
+    Creates table: schedule_info: containing info on information on scheduled scans
+    schedule_info table:
 
+    id                  INTEGER PRIMARY KEY,
+    active              INT NOT NULL,
+    target              TEXT NOT NULL,
+    company             TEXT NOT NULL,
+    schedule            TEXT NOT NULL,
+    # schedule (cron style?)
+    tools               TEXT,
+    # Contains a comma delimited list of tools to use. 
+    categories          TEXT,
+    # Contains a comma delimited list of tools to use from given categories. 
+    wordlist            TEXT,
+    last_run            DATE,
+    last_scan_id        INTEGER,
+    infile              TEXT NOT NULL,
+    intype              TEXT NOT NULL,
+    # can be set to either file or asset
+    # file = filename = input. asset = every line of file = input.
+    outfile             TEXT NOT NULL,
+    parser              TEXT NOT NULL,
+    meta                TEXT
+
+'''
+
+
+    # @param: asset: dict: a dict of asset information to add to the db (needs to contain target & company)
+    def add_schedule(self, schedule:dict):
+        connection = sqlite3.connect(self.db_name)
+        cursor= connection.cursor();
+        # Should add given information into the database.
+        try:
+            cursor.execute('INSERT INTO schedule_info (active, target, company, schedule, \
+                tools, categories, wordlist, infile, intype, \
+                outfile, parser, meta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
+                (schedule['active'], schedule['target'], schedule['company'], schedule['schedule'], \
+                    schedule['tools'], schedule['categories'], schedule['wordlist'], schedule['infile'], \
+                    schedule['intype'], schedule['outfile'], schedule['parser'], schedule['meta'], ))
+            # There will definintely be errors... not everything has all these values.
+            # Could set them to blank on the way in?
+            connection.commit() 
+            connection.close()
+            return 0
+        except Exception as e:
+            print('[-] Database error in add_schedule:')
+            print(e)
+            return -1
+        return 0
+
+    def modify_schedule(self, target, schedule:dict, company=self.company):
+        connection = sqlite3.connect(self.db_name)
+        cursor= connection.cursor();
+        # Should add given information into the database.
+        try:
+            cursor.execute('UPDATE schedule_info SET scan_completed=?, scan_status=? WHERE scan_id=? AND target=? AND company=?',\
+                (scan_data['completed'], scan_data['status'], scan_data['scan_id'], target, self.company))
+            connection.commit() 
+            connection.close()
+            return 0
+        except Exception as e:
+            print('[-] Database error in modify_schedule:')
+            print(e)
+            return -1
+        return 0
 

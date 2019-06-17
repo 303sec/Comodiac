@@ -217,6 +217,9 @@ class bugbot:
 
         return parsed_domains
 
+    def schedule_daemon():
+    	return
+
 
     # @param: category: string: categroy of the scan, to be parsed from tools.json
     # @param: target: string: the name of the target
@@ -302,7 +305,9 @@ class bugbot:
     #
     #
 
-
+    # Never accessed directly - run through threading.thread in run_tool*
+    # @param: target: string: target name
+    # @param: scan: dict: 
     def run_cmd(self, target, scan:dict):
         # This command will essentially be run as it's own process via _thread
         # Need a scan dict containing:
@@ -332,11 +337,13 @@ class bugbot:
         	scan['completed'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         self.bbdb.scan_complete(target, scan)
+
         outfile_assets = self.parse_output_file(scan['output'], scan['tool'])
+
         self.bbdb.add_asset() # for each asset
         self.bbdb.add_assets() # List of tuples
         '''
-        # Parse output into db - remove any out of scope 
+        # Parse output into db - remove any out of scope (or set to ignore)
         # remove previous symlink from /current
         # add new symlink for this scan
 
@@ -380,8 +387,8 @@ class bugbot:
             for tool_name, tool_options in tools_file.items():
                 if tool_name == tool:
                     file_directory = self.company_dir + '/targets/domain/' +  '/' + target + '/' + category + '/'
-                    with open(target):
-                        re.findall(tool_options['parse_result'])
+                    with open(file) as outfile:
+                        re.findall(tool_options['parse_result'], outfile.read())
             # os.path.getmtime = Check the time the file was edited last.
                         
 '''
