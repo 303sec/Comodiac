@@ -54,3 +54,6 @@ Web Interface - Low priority
 - Add new scans
 
 
+CLI Wrapper - Medium priorotiy
+- -i flag to trigger scheduled scan immediately: gets it from the database
+

@@ -49,21 +49,26 @@ class bbdb:
 
 
     Creates table: schedule_info: containing info on information on scheduled scans
+    Only one tool per schedule, but multiple can be added at once through the CLI.
+
     schedule_info table:
 
     id                  INTEGER PRIMARY KEY,
     target              TEXT NOT NULL,
     company             TEXT NOT NULL,
-    schedule            TEXT NOT NULL,
-    # schedule (cron style?)
-    tools               TEXT,
-    # Contains a comma delimited list of tools to use. 
-    categories          TEXT,
-    # Contains a comma delimited list of tools to use from given categories. 
+    schedule_interval   TEXT NOT NULL,
+    # interval between scans in seconds
+    schedule_uuid    TEXT NOT NULL,
+    # Should be unique for this item
+    # As we'll want to have the ability to run different schedules with different tools,
+    # we need to use the schedule_uuid to view specific schedules.
+    tool               TEXT,
+    category           TEXT,
+    # Contains the tooling to use. 
+    active              INTEGER NOT NULL,
     wordlist            TEXT,
     last_run            DATE,
     last_scan_id        INTEGER,
-    next_run            DATE,
     infile              TEXT NOT NULL,
     intype              TEXT NOT NULL,
     # can be set to either file or asset
@@ -124,21 +129,25 @@ class bbdb:
                 id INTEGER PRIMARY KEY,
                 target TEXT NOT NULL,
                 company TEXT NOT NULL,
-                schedule TEXT NOT NULL,
+                schedule_interval INT NOT NULL,
+                schedule_uuid TEXT NOT NULL,
                 infile TEXT NOT NULL,
                 intype TEXT NOT NULL,
                 outfile TEXT NOT NULL
                 parser TEXT NOT NULL,
-                tools TEXT,
-                categories TEXT,
+                tool TEXT NOT NULL,
+                use_category INT NOT NULL,
                 wordlist TEXT,
                 last_run DATE,
                 last_scan_id INTEGER,
-                meta TEXT
+                meta TEXT,
+                active INTEGER NOT NULL
                 )''')
         except Exception as e:
             print(e)
 
+    # There's a strong possibility it'll be useful to create an exec db to match with the schedule.
+    # Though that said the scheduler kind of fits that niche. Might not be worth it.
 
 
     # @param: scan_data: dict: containing:
@@ -150,6 +159,7 @@ class bbdb:
     def add_scan(self, target, scan_data:dict):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
+
         # Should add given information into the database.
         try:
             cursor.execute('INSERT INTO scan_info (target, company, scan_id, scan_tool, scan_category, scan_command, scan_status) VALUES (?, ?, ?, ?, ?, ?, ?)',\
@@ -309,32 +319,32 @@ class bbdb:
 
 
 
-'''
-    Creates table: schedule_info: containing info on information on scheduled scans
-    schedule_info table:
+    '''
+        Creates table: schedule_info: containing info on information on scheduled scans
+        schedule_info table:
 
-    id                  INTEGER PRIMARY KEY,
-    active              INT NOT NULL,
-    target              TEXT NOT NULL,
-    company             TEXT NOT NULL,
-    schedule            TEXT NOT NULL,
-    # schedule (cron style?)
-    tools               TEXT,
-    # Contains a comma delimited list of tools to use. 
-    categories          TEXT,
-    # Contains a comma delimited list of tools to use from given categories. 
-    wordlist            TEXT,
-    last_run            DATE,
-    last_scan_id        INTEGER,
-    infile              TEXT NOT NULL,
-    intype              TEXT NOT NULL,
-    # can be set to either file or asset
-    # file = filename = input. asset = every line of file = input.
-    outfile             TEXT NOT NULL,
-    parser              TEXT NOT NULL,
-    meta                TEXT
+        id                  INTEGER PRIMARY KEY,
+        active              TEXT NOT NULL,
+        target              TEXT NOT NULL,
+        company             TEXT NOT NULL,
+        schedule            TEXT NOT NULL,
+        # schedule (cron style?)
+        tools               TEXT,
+        # Contains a comma delimited list of tools to use. 
+        categories          TEXT,
+        # Contains a comma delimited list of tools to use from given categories. 
+        wordlist            TEXT,
+        last_run            DATE,
+        last_scan_id        INTEGER,
+        infile              TEXT NOT NULL,
+        intype              TEXT NOT NULL,
+        # can be set to either file or asset
+        # file = filename = input. asset = every line of file = input.
+        outfile             TEXT NOT NULL,
+        parser              TEXT NOT NULL,
+        meta                TEXT
 
-'''
+    '''
 
 
     # @param: asset: dict: a dict of asset information to add to the db (needs to contain target & company)
@@ -360,7 +370,7 @@ class bbdb:
             return -1
         return 0
 
-    def modify_schedule(self, target, schedule:dict, company=self.company):
+    def modify_schedule(self, target, schedule:dict, company):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Should add given information into the database.
@@ -376,3 +386,41 @@ class bbdb:
             return -1
         return 0
 
+    def get_active_schedules(self):
+        connection = sqlite3.connect(self.db_name)
+        connection.row_factory = sqlite3.Row
+        cursor= connection.cursor();
+        try:
+            cursor.execute('SELECT * FROM schedule_info WHERE active=1', \
+                (start_time, end_time, target, self.company))
+            return [dict(row) for row in cursor.fetchall()]
+
+        except Exception as e:
+            print(e)
+            return -1
+
+    def get_schedules_by_company(self, company):
+        connection = sqlite3.connect(self.db_name)
+        connection.row_factory = sqlite3.Row
+        cursor= connection.cursor();
+        try:
+            cursor.execute('SELECT * FROM schedule_info WHERE company=?', \
+                (company, ))
+            return [dict(row) for row in cursor.fetchall()]
+
+        except Exception as e:
+            print(e)
+            return -1
+
+    def get_schedules_by_target(self, target):
+        connection = sqlite3.connect(self.db_name)
+        connection.row_factory = sqlite3.Row
+        cursor= connection.cursor();
+        try:
+            cursor.execute('SELECT * FROM schedule_info WHERE target=?', \
+                (target, ))
+            return [dict(row) for row in cursor.fetchall()]
+
+        except Exception as e:
+            print(e)
+            return -1
