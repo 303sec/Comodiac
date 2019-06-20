@@ -1,0 +1,8 @@
+README.md
+bb.py
+comodiac.egg-info/PKG-INFO
+comodiac.egg-info/SOURCES.txt
+comodiac.egg-info/dependency_links.txt
+comodiac.egg-info/entry_points.txt
+comodiac.egg-info/requires.txt
+comodiac.egg-info/top_level.txt
