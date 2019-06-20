@@ -1,7 +1,7 @@
 {
 	"ping_check": {
 		"command": "nmap -sP INPUT -oG OUTPUT",
-		"category": "uptime_monitor",
+		"category": "content_monitor",
 		"type": "both",
 		"parse_result": ""
 		},

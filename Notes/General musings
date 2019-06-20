@@ -69,4 +69,79 @@ parsed
 
 
 
+ISSUE: ASSET STORAGE FOR ALERTING
 
+How assets are stored when they have a relationship with another asset:
+
+Ports:
+<IP>:<PORT>
+eg.
+10.10.10.10:4312
+
+Content:
+<scheme>://<domain>/<content>|response|content_length
+https://test.com/content|200|13526
+
+The target parameter is pretty useful here to be fair...
+
+target: 10.10.10.10
+Port: 3421
+
+target:test.com
+Content: /content/this.html|200|12435
+(still definintely worth doing response and length)
+
+target:test.com
+Subdomain: admin.test.com
+
+target: 
+
+
+
+Types of asset:
+subdomain
+domain
+IP address
+port
+content (full URL, HTTPS status & content length)
+screenshot
+
+
+Categories:
+OSINT:
+    - Whois
+    - Is the IP Address a CDN?
+    - Not really sure about this one
+Subdomain enumeration
+    - Amass
+    - Subfinder
+Domain Enumeration
+    - Massdns + generated wordlist
+Content Monitoring
+    - Checking the content for changes in content-length (?)
+    - Checking if port is still open (or, if previously closed, is open again)
+    - Checking if an IP address is still alive (or, if previously non-live, is live again)
+Content Discovery
+    - Spidering (Need some kind of tool to do this)
+    - Javascript Parsing
+Content Bruteforcing
+    - Gobuster / Recursebuster
+    - Parameter bruteforcing (Parameth)
+Visual Enumeration
+    - Aquatone, screenshot EVERYTHING
+    - Eyewitness(?)
+Port Scan
+    - nmap scripts on found open ports
+    - massscan for open ports
+Non-intrusive vuln scan
+    - CDN Bypass
+    - Subdomain Takeover
+intrusive vuln scan
+    - sqlmap
+    - bxss
+Credential bruteforce (probably not worth it):
+    - brutespray
+
+
+
+Important to note: the tools.json file needs more placeholders, for example 

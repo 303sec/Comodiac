@@ -29,6 +29,43 @@ Alerting - Medium priority
 - functions to be called whenever a new scan takes place. NOT on a cron job, probably.
 	- Need correct db functions to make work
 - slack channel integration (should be simple enough)
+- Different types of alerts:
+	I: how many schedule_intervals need to have passed to warrant change?
+		1 = item changed since last scan
+		2 = item changed 2 scans ago and has stayed changed for that amount of time
+		3 = etc.
+	N: A new asset has been discovered, or has come back online
+		0 = New asset hasn't been seen at all
+		1 = New asset hasn't been seen in one or more scans
+		2 = New asset hasn't been seen in two or more scans
+		3 = New asset hasn't been seen in three or more scans
+
+
+What do I want to see?
+
+- If a new subdomain is found
+
+SELECT * FROM assets WHERE asset_content=? and asset_type=subdomain
+(found_subdomain, )
+if rutnes None: New subdomain!
+
+- If a new IP address is found
+SELECT * FROM assets WHERE asset_content=? AND asset_type=ip AND target=? AND company=?
+
+- If a new port is discovered
+SELECT * FROM assets WHERE asset_content=? and asset_type=port AND target=? AND company=?
+
+- If the given IP address of a domain name changes
+SELECT * FROM assets WHERE asset_content=?
+
+- If new content has been found
+- If a page's content has changed
+- If an asset comes back up after going down
+SELECT * FROM assets WHERE asset_content=? 
+- 
+
+
+
 
 Tools.json - Medium Priority
 - meta: for scans that require extra functionalty to perform on the found assets after the scan.

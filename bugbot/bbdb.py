@@ -43,7 +43,7 @@ class bbdb:
     company:              TEXT NOT NULL
     asset_type:           TEXT NOT NULL
     asset_content:        TEXT NOT NULL
-    scan_datetime:        DATE NOT NULL
+    scan_completed:       DATE NOT NULL
     scan_id               INTEGER NOT NULL
     ignore                INT NOT NULL
 
