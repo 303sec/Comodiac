@@ -1,5 +1,5 @@
 README.md
-bb.py
+setup.py
 comodiac.egg-info/PKG-INFO
 comodiac.egg-info/SOURCES.txt
 comodiac.egg-info/dependency_links.txt

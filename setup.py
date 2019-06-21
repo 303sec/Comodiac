@@ -9,6 +9,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        bb=bb:cli
+        comodiac=comodiac:cli
     ''',
 )

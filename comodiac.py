@@ -29,49 +29,90 @@ class NotRequiredIf(click.Option):
             ctx, opts, args)
 
 @click.group()
+def cli():
+    pass
+
+@cli.command()
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-tf', '--targetfile', help='File of target Domains and IPs', type=click.File('rb'))
 @click.option('-x', '--outofscope', help='Out-of-scope Domain or IP in a comma delimited list')
 @click.option('-xf', '--outofscopefile', help='File of out-of-scope target Domains and IPs', type=click.File('rb'))
-@click.pass_context
-def cli(ctx, company, target, targetfile, outofscope, outofscopefile):
-	ctx.ensure_object(dict)
-	ctx.obj['company'] = company
-	ctx.obj['target'] = target
-	pass
+def add_target(company, target, targetfile, outofscope, outofscopefile):
+    print(company)
+    print(target)
+    print(targetfile)
+    print(outofscope)
+    print(outofscopefile)
 
 @cli.command()
-@click.pass_context
-def new_target(ctx):
-	print(ctx.obj['target'], ctx.obj['company'])
-
-@cli.command()
-@click.option('-i', '--schedule-interval', default='daily', help='Schedule Interval for scans')
-@click.option('-S', '--schedule-id', help='Schedule ID to edit')
-@click.option('-a', '--alert', help='Alert options')
-@click.option('-p', '--pause', is_flag=True, help='Pause or unpause scan - toggle')
-def schedule(company, target, targetfile, outofscope, outofscopefile, schedule_interval, schedule_id, alert, pause):
-	print('test')
-
-
-
-
-
-
-
-
-'''
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
-@click.option('-tf', '--targetfile', help='File of target Domains and IPs', type=click.File('rb'))
-@click.option('-x', '--outofscope', help='Out-of-scope Domain or IP in a comma delimited list')
-@click.option('-xf', '--outofscopefile', help='File of out-of-scope target Domains and IPs', type=click.File('rb'))
+def view_target(company, target):
+    print(company)
+    print(target)
+
+@cli.command()
+@click.option('-c', '--company', help='Company Name')
+@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-i', '--schedule-interval', default='daily', help='Schedule Interval for scans')
+@click.option('-T', '--tool', help='Tool to schedule')
+@click.option('-C', '--category', help='Category of tools to schedule')
+@click.option('-p', '--preset', help='Schedule Preset', default='default')
+@click.option('-a', '--alert', help='Alert options', default='default')
+def add_schedule(company, target, schedule_interval, schedule_id, alert):
+    print(company)
+    print(target)
+    print(targetfile)
+    print(outofscope)
+    print(outofscopefile)
+	
+
+@cli.command()
+@click.option('-c', '--company', help='Company Name')
+@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-S', '--schedule-id', help='Schedule ID to edit')
-@click.option('-a', '--alert', help='Alert options')
-@click.option('-p', '--pause', is_flag=True, help='Pause or unpause scan - toggle')
-'''
+def view_schedule(company, target, schedule_id):
+    return
+
+@cli.command()
+@click.option('-S', '--schedule-id', help='Schedule ID to edit')
+@click.option('-i', '--schedule-interval', default='daily', help='Schedule Interval for scans')
+@click.option('-T', '--tool', help='Tool to schedule')
+@click.option('-C', '--category', help='Category of tools to schedule')
+@click.option('-p', '--preset', help='Schedule Preset', default='default')
+@click.option('-a', '--alert', help='Alert options', default='default')
+@click.option('-p', '--pause', is_flag=True, help='Pause or unpause scan')
+def edit_schedule(company, target, schedule_interval, schedule_id, alert, pause):
+    return
+
+@cli.command()
+@click.option('-S', '--schedule-id', help='Schedule ID to edit')
+def delete_schedule(company, target, schedule_interval, schedule_id, alert, pause):
+    return
+
+@cli.command()
+@click.option('-c', '--company', help='Company Name')
+@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
+@click.option('-T', '--tool', help='Tool to schedule')
+@click.option('-C', '--category', help='Category of tools to schedule')
+def scan_now(company, target, tool, category):
+    return
+
+
+@cli.command()
+@click.option('-c', '--company', help='Company Name')
+@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
+@click.option('-T', '--tool', help='Tool to schedule')
+@click.option('-C', '--category', help='Category of tools to schedule')
+@click.option('-fd', '--from-date', help='Start date of assets to view')
+@click.option('-td', '--to-date', help='End date of assets to view', default='today')
+def view_assets(company, target, tool, category, from_date, to_date):
+    print(company)
+    print(target)
+    return
+
+
 
 if __name__ == '__main__':
 	cli()
