@@ -33,26 +33,63 @@ def cli():
     pass
 
 @cli.command()
-@click.option('-c', '--company', help='Company Name')
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
+@click.option('-c', '--company', help='Company Name', required=True)
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
-@click.option('-tf', '--targetfile', help='File of target Domains and IPs', type=click.File('rb'))
+@click.option('-tf', '--targetfile', help='File of target Domains and IPs', type=click.File('r+'))
 @click.option('-x', '--outofscope', help='Out-of-scope Domain or IP in a comma delimited list')
-@click.option('-xf', '--outofscopefile', help='File of out-of-scope target Domains and IPs', type=click.File('rb'))
-def add_target(company, target, targetfile, outofscope, outofscopefile):
-    print(company)
-    print(target)
-    print(targetfile)
-    print(outofscope)
-    print(outofscopefile)
+@click.option('-xf', '--outofscopefile', help='File of out-of-scope target Domains and IPs', type=click.Path())
+def add_target(verbose, company, target, targetfile, outofscope, outofscopefile):
+    if target == None and targetfile == None and outofscope == None and outofscopefile == None:
+        click.echo('Error: at least one in scope or out of scope target or file required.')
+        return -1
+
+    bb = bugbot.bugbot(company, verbose)
+
+    # parse targets from file or CLI
+    targets = []
+    out_of_scope_targets = []
+    if targetfile:
+        for file_target in targetfile:
+            targets.append(file_target.strip())
+    if target:
+        for split_target in target.split(','):
+            targets.append(split_target)
+
+    if outofscopefile:
+        for out_of_scope_target in outofscopefile:
+            out_of_scope_targets.append(out_of_scope_target.strip())
+    if outofscope:
+        for split_target in outofscope.split(','):
+            out_of_scope_targets.append(split_target)
+
+    if target or targetfile:
+        print(targets)
+        # Turns input into inscope_domains.txt & inscope_ips.txt
+        parsed_scope = bb.parse_scope_to_files(targets)
+        print(parsed_scope)
+        # Looks at the inscope_domains.txt file and generates a file with the wildcards as usable domains.
+        # e.g. *.test.com inscope_domains.txt becomes test.com in wildcard_domains.
+        wildcards = bb.parse_wildcard_domains()
+        # We create folders for each of the inscope targets, including wildcards
+        for scoped_domain in parsed_scope['domain_list']:
+            bb.add_new_target(scoped_domain.strip())
+        for scoped_ip in parsed_scope['ip_list']:
+            bb.add_new_target(scoped_ip.strip())
+
+    if outofscope or outofscopefile:
+        bb.parse_scope_to_files(targets, False)
+
 
 @cli.command()
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
-def view_target(company, target):
-    print(company)
-    print(target)
+def view_target(verbose, company, target):
+    print('View-target functionality is todo.')
 
 @cli.command()
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-i', '--schedule-interval', default='daily', help='Schedule Interval for scans')
@@ -60,22 +97,20 @@ def view_target(company, target):
 @click.option('-C', '--category', help='Category of tools to schedule')
 @click.option('-p', '--preset', help='Schedule Preset', default='default')
 @click.option('-a', '--alert', help='Alert options', default='default')
-def add_schedule(company, target, schedule_interval, schedule_id, alert):
-    print(company)
-    print(target)
-    print(targetfile)
-    print(outofscope)
-    print(outofscopefile)
+def add_schedule(verbose, company, target, schedule_interval, tool, category, preset, alert):
+    
 	
 
 @cli.command()
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-S', '--schedule-id', help='Schedule ID to edit')
-def view_schedule(company, target, schedule_id):
+def view_schedule(verbose, company, target, schedule_id):
     return
 
 @cli.command()
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-S', '--schedule-id', help='Schedule ID to edit')
 @click.option('-i', '--schedule-interval', default='daily', help='Schedule Interval for scans')
 @click.option('-T', '--tool', help='Tool to schedule')
@@ -83,31 +118,34 @@ def view_schedule(company, target, schedule_id):
 @click.option('-p', '--preset', help='Schedule Preset', default='default')
 @click.option('-a', '--alert', help='Alert options', default='default')
 @click.option('-p', '--pause', is_flag=True, help='Pause or unpause scan')
-def edit_schedule(company, target, schedule_interval, schedule_id, alert, pause):
+def edit_schedule(verbose, company, target, schedule_interval, schedule_id, alert, pause):
     return
 
 @cli.command()
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-S', '--schedule-id', help='Schedule ID to edit')
-def delete_schedule(company, target, schedule_interval, schedule_id, alert, pause):
+def delete_schedule(verbose, company, target, schedule_interval, schedule_id, alert, pause):
     return
 
 @cli.command()
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-T', '--tool', help='Tool to schedule')
 @click.option('-C', '--category', help='Category of tools to schedule')
-def scan_now(company, target, tool, category):
+def scan_now(verbose, company, target, tool, category):
     return
 
 
 @cli.command()
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-T', '--tool', help='Tool to schedule')
 @click.option('-C', '--category', help='Category of tools to schedule')
 @click.option('-fd', '--from-date', help='Start date of assets to view')
 @click.option('-td', '--to-date', help='End date of assets to view', default='today')
-def view_assets(company, target, tool, category, from_date, to_date):
+def view_assets(verbose, company, target, tool, category, from_date, to_date):
     print(company)
     print(target)
     return

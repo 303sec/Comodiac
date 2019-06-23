@@ -18,19 +18,20 @@ import math
  
 
 class bugbot:
-    def __init__(self, company_name):
+    def __init__(self, company_name, verbose=False):
+        self.verbose = verbose
         self.company_name = company_name
         if os.path.exists(os.path.expanduser('~') + '/bb') == False:
-            print('[+] Creating ~/bb directory')
+            self.verbose_print('[+] Creating ~/bb directory')
             os.mkdir(os.path.expanduser('~') + '/bb')
         self.base_dir = os.path.expanduser('~') + '/bb'
         self.company_dir = os.path.expanduser('~/bb/') + self.company_name
         self.add_new_company()
-        self.db = bbdb.bbdb(self.base_dir, self.company_name)
+        self.db = bbdb(self.base_dir, self.company_name)
         
     def add_new_company(self):
         if os.path.exists(self.company_dir):
-            print('[+] Company directory found')
+            self.verbose_print('[+] Company directory found')
             return 
         else:
             os.mkdir(self.company_dir)
@@ -45,10 +46,10 @@ class bugbot:
     # This function has been basically tested, but not much. Seems to work.
     def ip_or_domain(self, target):
         if re.match('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', target):
-            print('[+]', target, 'identified as IP address.')
+            self.verbose_print('[+]', target, 'identified as IP address.')
             return 'ip'
-        elif re.match('([a-z0-9|-]+\.)*[a-z0-9|-]+\.[a-z]+', target):
-            print('[+]', target, 'identified as domain name.')
+        elif re.match('([\*a-z0-9|-]+\.)*[\*a-z0-9|-]+\.[a-z]+', target):
+            self.verbose_print('[+]', target, 'identified as domain name.')
             return 'domain'
         else:
             return None
@@ -74,33 +75,18 @@ class bugbot:
         target = target.replace('/', '-')
         if wildcard_root == None:
             target_dir = self.company_dir + '/targets/' + self.ip_or_domain(target) + 's/' + target
+            target_notes_dir = target_dir + '/notes'
         else:
             target_dir = self.company_dir + '/targets/' + self.ip_or_domain(target) + 's/' + wildcard_root + '/' + target
 
         try:
             os.makedirs(target_dir)
-            print('[+] Creating directory', target_dir, '.')
+            os.makedirs(target_notes_dir)
+            self.verbose_print('[+] Creating directory', target_dir)
+            self.verbose_print('[+] Creating directory', target_notes_dir)
         except:
-            print('[+] Directory', target_dir, 'found.')
+            self.verbose_print('[+] Directory', target_dir, 'found.')
             pass
-
-
-
-
-        # This whole part feels redundant, like it'd surely be done when the scan runs?
-        # Still might be a useful snippet, so I haven't deleted it.
-        '''
-        if '*' in target or '*' in wildcard:
-            with open('tools.json', 'r') as tools_file:
-                tools = json.load(tools_file)
-                for tool, tool_options in tools.items():
-                    if tool_options['type'] == ip_or_domain(target) or tool_options['type'] == 'both':
-                        tool_category_dir = target_dir + '/' + tool_options['category']
-                        tool_dir = tool_category_dir + '/' + tool
-                        # Make a folder for the scan, including the category
-                        os.makedirs(tool_dir)
-        '''
-
 
 
     # @param: scope: string: comma deliniated list of targets
@@ -109,56 +95,48 @@ class bugbot:
     # @filesystem: adds the new hosts to in_scope_domains/ips.txt, sorts the file by unique entries.
     # @filesystem: adds a directory to company dir for each inscope host.
     # @return parsed_scope: dict: dict with an array for both ip_list and domain_list
-    def parse_cli_scope(self, scope, in_or_out='in', file=False):
-        # Bit of a hack to get the file formatted like the comma-demlimited input.
-        if file == True:
-            tmp_scope = []
-            with open(scope, 'r+') as scope_file:
-                for line in scope_file:
-                    line = line.strip()
-                    tmp_scope.append(line + ',')
-            scope = ''.join(tmp_scope)
+    def parse_scope_to_files(self, scope, inscope=True):
+        if inscope == True:
+            filename_base = self.company_dir + '/scope/inscope'
+        else:
+            filename_base = self.company_dir + '/scope/outofscope'
 
-        scope_array = scope.split(',')
-        filename_base = self.company_dir + '/scope/' + in_or_out + 'scope'
         ip_scope_file = filename_base + '_ips.txt'
         domain_scope_file = filename_base + '_domains.txt'
         ip_list = []
         domain_list = []
 
-        for target in scope_array:
+        for target in scope:
             # Avoids any issues with ip ranges or domain content being added.
             target_no_slash = target.split('/')[0]
             # Checks the TLD or last digits of the IP.
-            if target_no_slash.split('.')[-1].isdigit():
-                # IP addresses
-                ip_list.append(target)
+            if self.ip_or_domain(target_no_slash) == 'ip':
+                ip_list.append(target + '\n')
                 # Add IP address to inscope_ips.txt
-                with open(ip_scope_file, 'a') as file:
-                    file.write(target + '\n')
-                print('[+] Writing IP address ' + target + ' to scope')
             else:
                 # Hostnames
-                domain_list.append(target)
+                domain_list.append(target + '\n')
                 # Add domain to inscope_domains.txt
-                with open(domain_scope_file, 'a') as file:
-                    file.write(target + '\n')
-                print('[+] Writing domain ' + target + ' to scope')
 
+        with open(ip_scope_file, 'a+') as file:
+            for ip in ip_list:
+                self.verbose_print('[+] Writing IP address', ip.strip(), 'to', ip_scope_file)
+                file.write(ip)
+
+        with open(domain_scope_file, 'a+') as file:
+            for domain in domain_list:
+                self.verbose_print('[+] Writing Domain', domain.strip(), 'to', domain_scope_file)
+                file.write(domain)
+                
         # Sort both files to only have unique entries
-        print('[+] Sorting scope files by unique values')
+        self.uniq_file(ip_scope_file)
+        self.uniq_file(domain_scope_file)
+        self.verbose_print('[+] Sorting scope files by unique values')
 
-        # Honestly, this bit below needs fixing to be honest. Maybe write a function to do this.
-        subprocess.Popen('sort -u ' + domain_scope_file + ' > ' + domain_scope_file + '.tmp && mv ' + domain_scope_file + '.tmp ' + domain_scope_file, shell=True)
-        subprocess.Popen('sort -u ' + ip_scope_file + ' > ip_tmp.txt && mv ip_tmp.txt ' + ip_scope_file, shell=True)
+        parsed_scope = {'ip_list': ip_list, 'domain_list': domain_list}
 
-        parsed_scope = { 'ip_list': ip_list, 'domain_list': domain_list }
+        return parsed_scope
 
-        if in_or_out == 'in':
-            return parsed_scope
-        else:
-            # Probably a bad idea, but why return anything when it's out of scope?
-            return {}
 
 
     # @param parsed_scope: list: list of parsed hosts. Default = get from local file 
@@ -198,7 +176,7 @@ class bugbot:
 
         # Add parsed_domains to the wildcard file, and make them 'scannable'
         with open(wildcard_domain_file, 'a') as file:
-            print('[+] Writing wildcard domains to wildcard_fragments.txt')
+            self.verbose_print('[+] Writing wildcard domains to wildcard_fragments.txt')
             for domain in parsed_domains['wildcard_domains']:
                 # Remove the * in *.xxx.com        
                 scannable_domain = domain.replace('*.', '') + '\n'
@@ -206,15 +184,15 @@ class bugbot:
                 file.write(scannable_domain)
         # Add parsed_domains to the fragment file.
         with open(wildcard_fragment_file, 'a') as file:
-            print('[+] Writing wildcard fragments to wildcard_domains.txt')
+            self.verbose_print('[+] Writing wildcard fragments to wildcard_domains.txt')
             for domain in parsed_domains['wildcard_fragments']:
                 # Write scannable wildcard domains to file
                 file.write(domain + '\n')
                 
         # Make sure the files don't have any repeats... also this is not a good way of doing this.
-        print('[+] Sorting the wildcard domains & fragments by unique')
-        subprocess.Popen('sort -u ' + wildcard_domain_file + ' > ' + wildcard_domain_file + '.tmp && mv ' + wildcard_domain_file + '.tmp ' + wildcard_domain_file, shell=True)    
-        subprocess.Popen('sort -u ' + wildcard_fragment_file + ' > ' + wildcard_fragment_file + '.tmp && mv ' + wildcard_fragment_file + '.tmp ' + wildcard_fragment_file, shell=True)    
+        self.verbose_print('[+] Sorting the wildcard domains & fragments by unique')
+        self.uniq_file(wildcard_domain_file)
+        self.uniq_file(wildcard_fragment_file)
 
         return parsed_domains
 
@@ -294,7 +272,7 @@ class bugbot:
                 elif schedule['use_category'] == 1:
                     run_tools_by_category(schedule['tool'], schedule['target'], wordlist)
                 else:
-                    print('this should not ever happen.')
+                    self.verbose_print('this should not ever happen.')
         return 0
 
 
@@ -314,7 +292,7 @@ class bugbot:
                     try:
                         os.makedirs(output_dir)
                     except:
-                        print('[+] Directory', output_dir, 'found.')
+                        self.verbose_print('[+] Directory', output_dir, 'found.')
                         pass
                     output_file = output_dir + '/' + tool + '.' + str(timestamp())
                     # Check that the tool actually uses a wordlist
@@ -347,9 +325,9 @@ class bugbot:
                     output_dir = self.company_dir + '/targets/' + self.ip_or_domain(target) +  's/' + target + '/' + tool_options['category'] + '/' + tool + '/' + str(datetime.today().strftime('%d%m%Y'))
                     try:
                         os.makedirs(output_dir)
-                        print('[+] Creating directory', output_dir, '.')
+                        self.verbose_print('[+] Creating directory', output_dir, '.')
                     except:
-                        print('[+] Directory', output_dir, 'found.')
+                        self.verbose_print('[+] Directory', output_dir, 'found.')
                         pass
                     output_file = output_dir + '/' + tool + '.' + str(timestamp())
                     # Check that the tool actually uses a wordlist
@@ -363,10 +341,10 @@ class bugbot:
                     scan_id = target.strip() + tool + str(timestamp())
                     scan_data = {'category': tool_options['category'], 'tool': tool, 'command': command, 'output': output_file, 'scan_id': scan_id, 'status': 'waiting'}
                     # Add the scan to db (before the threading stuff comes into play)
-                    print('running db.add_scan')
+                    self.verbose_print('running db.add_scan')
                     self.db.add_scan(target, scan_data)
                     # This should launch the command into a different thread!
-                    print('starting new thread')
+                    self.verbose_print('starting new thread')
                     #self.run_cmd(target, scan_data)
                     # Python3's way of threading
                     threading.Thread(target=self.run_cmd, args=(target, scan_data)).start()
@@ -433,13 +411,13 @@ class bugbot:
         #1 - Adds scan info to the target db in a table called 'live_scans' or something equally appropriate.
         #1 - Uses a blocking Popen, starttime/scan endtime PID and any errors. 
         #2 - The followng is a rough idea for the live_scans table:
-        #     id:                   PRIMARY KEY
+        #     id:                  PRIMARY KEY
         #    scan_name:            TEXT NOT NULL
         #    scan_command:         TEXT NOT NULL
         #    scan_started:         DATE NOT NULL
         #    scan_completed:       DATE
-        #    scan_pid:               TEXT NOT NULL
-        #    scan_status:           TEXT NOT NULL
+        #    scan_pid:             TEXT NOT NULL
+        #    scan_status:          TEXT NOT NULL
         #
         #3 - scan_status can be:
         #waiting
@@ -455,6 +433,18 @@ class bugbot:
         #7 - Can take an input of multiple tools at once, to run them all in a blocking fashion in a loop to keep processing down.
         #8 - Possible later feature: run scans as either blocking or async!
         '''
+
+    def parse_interval(self, interval):
+        preset_intervals = {'hourly': 3600, 'daily': 86400, 'weekly': 604800}
+        if interval == 'hourly':
+            parsed_interval = 3600
+        elif interval == 'daily':
+            parsed_interval = 86400
+        elif interval == 'weekly':
+            parsed_interval = 604800
+        if 'hr' in interval:
+
+
                     
     def timestamp():
         d = datetime.utcnow()
@@ -472,6 +462,21 @@ class bugbot:
                         re.findall(tool_options['parse_result'], outfile.read())
             # os.path.getmtime = Check the time the file was edited last.
                         
+    def verbose_print(self, *arg):
+        if self.verbose == True:
+            to_print = [a + ' ' for a in arg]
+            print(''.join(to_print))
+
+    def uniq_file(self, path):
+        if os.path.exists(path):
+            uniq_list = []
+            with open(path, 'r') as f: 
+                lines = [line.rstrip('\n') for line in f]
+                uniq_list = set(lines)
+            with open(path, 'w') as w:
+                for uniq in uniq_list:
+                    w.write(uniq + '\n')
+
 '''
 Useful snippet to get latest file in dir:
     file_directory = self.company_dir + '/targets/domain/' +  '/' + target + '/' + category + '/' + tool + '/' datetime.today().strftime('%d%m%Y')

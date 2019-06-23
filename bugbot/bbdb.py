@@ -133,7 +133,7 @@ class bbdb:
                 schedule_uuid TEXT NOT NULL,
                 infile TEXT NOT NULL,
                 intype TEXT NOT NULL,
-                outfile TEXT NOT NULL
+                outfile TEXT NOT NULL,
                 parser TEXT NOT NULL,
                 tool TEXT NOT NULL,
                 use_category INT NOT NULL,
