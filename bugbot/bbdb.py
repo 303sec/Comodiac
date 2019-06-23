@@ -380,20 +380,38 @@ class bbdb:
         parser              TEXT NOT NULL,
         meta                TEXT
 
+
+        id INTEGER PRIMARY KEY,
+        target TEXT NOT NULL,
+        company TEXT NOT NULL,
+        schedule_interval INT NOT NULL,
+        schedule_uuid TEXT NOT NULL,
+        infile TEXT NOT NULL,
+        intype TEXT NOT NULL,
+        parser TEXT NOT NULL,
+        tool TEXT NOT NULL,
+        use_category INT NOT NULL,
+        wordlist TEXT,
+        last_run DATE,
+        last_scan_id INTEGER,
+        meta TEXT,
+        active INTEGER NOT NULL
+
     '''
 
 
     # @param: asset: dict: a dict of asset information to add to the db (needs to contain target & company)
     def add_schedule(self, schedule:dict):
+        print(schedule)
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
             cursor.execute('INSERT INTO schedule_info (active, target, company, schedule_interval, \
-                tools, categories, wordlist, infile, intype, \
+                tool, use_category, wordlist, infile, intype, \
                 parser, meta, schedule_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
-                (schedule['active'], schedule['target'], schedule['company'], schedule['schedule'], \
-                    schedule['tools'], schedule['categories'], schedule['wordlist'], schedule['infile'], \
+                (schedule['active'], schedule['target'], schedule['company'], schedule['schedule_interval'], \
+                    schedule['tool'], schedule['use_category'], schedule['wordlist'], schedule['infile'], \
                     schedule['intype'], schedule['parser'], schedule['meta'], schedule['uuid']))
             # There will definintely be errors... not everything has all these values.
             # Could set them to blank on the way in?

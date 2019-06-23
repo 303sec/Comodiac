@@ -137,7 +137,9 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
 
     if category:
         tool = category
-        category = True
+        use_category = 1
+    else:
+        use_category = 0
 
     with open('tools.json', 'r') as tools_file:
         tool_found = False
@@ -160,7 +162,7 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
 
                 epoch_interval = bb.parse_interval(schedule_interval)
                 schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': epoch_interval, \
-                'tool': tool, 'use_category': category, 'wordlist': wordlist, 'infile': infile, 'intype':intype, \
+                'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'infile': infile, 'intype':intype, \
                 'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
                 bb.add_schedule(schedule)
     if tool_found == False:
