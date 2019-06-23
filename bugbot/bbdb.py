@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 import time
 import random
 import sqlite3
+import os
 
 
 class bbdb:
@@ -85,10 +86,13 @@ class bbdb:
         # Create base db (bb.db) scan_info and asset tables
         # Check to see if the database exists. If not, create it.
         self.company = company
-        self.db_name = base_dir + '/bb.db'
-        print('[+] Creating database at', self.db_name)
-        connection = sqlite3.connect(self.db_name)
 
+        self.db_name = base_dir + '/bb.db'
+        
+        if not os.path.exists(self.db_name):
+            print('[+] Creating database at', self.db_name)
+
+        connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Create the scan_info table for the company
         try:
@@ -107,7 +111,7 @@ class bbdb:
                 scan_status TEXT NOT NULL
                 )''')
         except Exception as e:
-            print(e)
+            pass
         # Create the asset table
         try:
             cursor.execute('''CREATE TABLE assets (
@@ -122,7 +126,7 @@ class bbdb:
                 ignore INTEGER NOT NULL
                 )''')
         except Exception as e:
-            print(e)
+            pass
 
         try:
             cursor.execute('''CREATE TABLE schedule_info (
@@ -133,7 +137,6 @@ class bbdb:
                 schedule_uuid TEXT NOT NULL,
                 infile TEXT NOT NULL,
                 intype TEXT NOT NULL,
-                outfile TEXT NOT NULL,
                 parser TEXT NOT NULL,
                 tool TEXT NOT NULL,
                 use_category INT NOT NULL,
@@ -144,10 +147,49 @@ class bbdb:
                 active INTEGER NOT NULL
                 )''')
         except Exception as e:
-            print(e)
+            pass
+
+        try:
+            cursor.execute('''CREATE TABLE targets (
+                id INTEGER PRIMARY KEY,
+                target TEXT NOT NULL,
+                company TEXT NOT NULL,
+                target_dir TEXT NOT NULL
+                )''')
+        except Exception as e:
+            pass
 
     # There's a strong possibility it'll be useful to create an exec db to match with the schedule.
     # Though that said the scheduler kind of fits that niche. Might not be worth it.
+
+
+    def add_target(self, target, target_dir):
+        connection = sqlite3.connect(self.db_name)
+        cursor= connection.cursor();
+        # Should add given information into the database.
+        try:
+            cursor.execute('INSERT INTO targets (target, target_dir, company) VALUES (?,?,?)',\
+                (target, target_dir, self.company))
+            connection.commit() 
+            connection.close()
+
+        except Exception as e:
+            print('[-] Database error in add_target:')
+            print(e)
+            return -1
+
+
+    def get_target_dir(self, target):
+        connection = sqlite3.connect(self.db_name)
+        cursor= connection.cursor();
+        try:
+            cursor.execute('SELECT target_dir FROM targets WHERE target=?', (target, ))
+            result = cursor.fetchall()
+            return result
+
+        except Exception as e:
+            print(e)
+            return -1
 
 
     # @param: scan_data: dict: containing:
@@ -257,7 +299,7 @@ class bbdb:
         try:
             cursor.execute('SELECT * FROM assets WHERE asset_category=? AND target=? AND company=?', (asset_category, target, self.company))
             result = cursor.fetchall()
-            return [dict(row) for row in c.fetchall()]
+            return [dict(row) for row in cursor.fetchall()]
 
         except Exception as e:
             print(e)
@@ -310,12 +352,6 @@ class bbdb:
         '''
 
 
-    # @param: string: table name to remove any non 0-9 a-z, . or - characters from
-    # @return: a 'scrubbed' table name with everything bad removed. Hopefully.
-    # Not sure we need this anymore.
-    def scrub(self, table_name):
-        return ''.join( chr for chr in table_name if re.match('[0-9a-zA-Z\.\-]', chr) )
-
 
 
 
@@ -353,12 +389,12 @@ class bbdb:
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
-            cursor.execute('INSERT INTO schedule_info (active, target, company, schedule, \
+            cursor.execute('INSERT INTO schedule_info (active, target, company, schedule_interval, \
                 tools, categories, wordlist, infile, intype, \
-                outfile, parser, meta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
+                parser, meta, schedule_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
                 (schedule['active'], schedule['target'], schedule['company'], schedule['schedule'], \
                     schedule['tools'], schedule['categories'], schedule['wordlist'], schedule['infile'], \
-                    schedule['intype'], schedule['outfile'], schedule['parser'], schedule['meta'], ))
+                    schedule['intype'], schedule['parser'], schedule['meta'], schedule['uuid']))
             # There will definintely be errors... not everything has all these values.
             # Could set them to blank on the way in?
             connection.commit() 

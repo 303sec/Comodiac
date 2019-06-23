@@ -1,5 +1,7 @@
 import click
 from bugbot import bugbot
+import json
+import uuid
 
 
 # From stackoverflow - https://stackoverflow.com/questions/44247099/click-command-line-interfaces-make-options-required-if-other-optional-option-is
@@ -34,15 +36,15 @@ def cli():
 
 @cli.command()
 @click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
-@click.option('-c', '--company', help='Company Name', required=True)
+@click.option('-c', '--company', required=True, help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-tf', '--targetfile', help='File of target Domains and IPs', type=click.File('r+'))
 @click.option('-x', '--outofscope', help='Out-of-scope Domain or IP in a comma delimited list')
 @click.option('-xf', '--outofscopefile', help='File of out-of-scope target Domains and IPs', type=click.Path())
 def add_target(verbose, company, target, targetfile, outofscope, outofscopefile):
-    if target == None and targetfile == None and outofscope == None and outofscopefile == None:
-        click.echo('Error: at least one in scope or out of scope target or file required.')
-        return -1
+    if target is None and targetfile is None and outofscope is None and outofscopefile is None:
+        click.echo('[-] Error: at least one in scope or out of scope target or file required. Exiting.')
+        exit()
 
     bb = bugbot.bugbot(company, verbose)
 
@@ -90,15 +92,79 @@ def view_target(verbose, company, target):
 
 @cli.command()
 @click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
-@click.option('-c', '--company', help='Company Name')
-@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
-@click.option('-i', '--schedule-interval', default='daily', help='Schedule Interval for scans')
+@click.option('-c', '--company', required=True, help='Company Name')
+@click.option('-t', '--target', required=True, help='Target to add scheduled scans')
+@click.option('-i', '--schedule-interval', required=True, default='daily', help='Schedule Interval for scans')
 @click.option('-T', '--tool', help='Tool to schedule')
 @click.option('-C', '--category', help='Category of tools to schedule')
-@click.option('-p', '--preset', help='Schedule Preset', default='default')
+@click.option('-p', '--preset', help='Schedule Preset')
 @click.option('-a', '--alert', help='Alert options', default='default')
 def add_schedule(verbose, company, target, schedule_interval, tool, category, preset, alert):
-    
+    if tool is None and preset is None and category is None:
+        click.echo('[-] Error: at least one tool, category or preset required. Exiting.')
+        exit()
+    if preset:
+        print('Presets not yet supported! Exiting.')
+        exit()
+    if category:
+        print('Categories not yet supported! Exiting.')
+        exit()
+
+    bb = bugbot.bugbot(company, verbose)
+
+
+    # Need to check if the target exists. This would be easier if there was a database for the targets...
+    if not bb.does_target_exist(target):
+        click.echo('[-] Error: Target not found. Exiting.')
+        exit()
+        # add_target(verbose, company, target, None, None, None)
+
+
+    # @param: info: dict: A dictionary of relevant information about the schedule, including:
+    #
+    # schedule['active']: default = 1
+    # schedule['target']: required by CLI.
+    # schedule['company']: self.company
+    # schedule['schedule_interval']: default: 86400 (daily). Provided by CLI.
+    # schedule['tool']: name of the tool (or category, if use_category == 1) required by CLI. 
+    # schedule['use_category']: 1 if the scan is a category of tools (or just one). In the CLI, this can be used with --category
+
+    # schedule['wordlist']: default: the wordlist in tools.json
+    # schedule['infile']: if 'intype' == file, use this infile. From tools.json
+    # schedule['intype']: 'file' or 'target'. If file, use the supplied 'infile', which should be available in tools.json
+    # schedule['parser']: the parser regular expression to use on the output file. From tools.json
+    # schedule['meta']: any extra functions to perform post-scan. From tools.json
+
+    if category:
+        tool = category
+        category = True
+
+    with open('tools.json', 'r') as tools_file:
+        tool_found = False
+        tools = json.loads(tools_file.read())
+        for tool_name, tool_options in tools.items():
+            if tool_name == tool or tool_options['category'] == tool:
+                tool_found = True
+                if 'wordlist' in tool_options:
+                    wordlist = tool_options['wordlist']
+                else:
+                    wordlist = None
+                if tool_options['intype'] == 'file':
+                    infile = tool_options['infile']
+                else:
+                    infile = None
+                intype = tool_options['intype']
+                parser = tool_options['parse_result']
+                meta = tool_options['meta']
+                schedule_uuid = str(uuid.uuid4())
+
+                epoch_interval = bb.parse_interval(schedule_interval)
+                schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': epoch_interval, \
+                'tool': tool, 'use_category': category, 'wordlist': wordlist, 'infile': infile, 'intype':intype, \
+                'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
+                bb.add_schedule(schedule)
+    if tool_found == False:
+        click.echo('[-] Tool not found.')
 	
 
 @cli.command()

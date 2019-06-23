@@ -2,14 +2,16 @@
 	"ping_check": {
 		"command": "nmap -sP INPUT -oG OUTPUT",
 		"category": "content_monitor",
+		"intype": "target",
 		"type": "both",
 		"parse_result": ""
 		},
 	"amass_active": {
 		"command": "amass -active -brute -ip -src -d INPUT -oA OUTPUT -w WORDLIST",
-		"input": "scope/wildcard_domains.txt",
+		"infile": "wildcard_domains.txt",
 		"wordlist": "/usr/share/wordlists/all.txt",
 		"category": "subdomain_enumeration",
+		"intype": "file",
 		"type": "domain",
 		"parse_result": "",
 		"meta": "add_"
@@ -17,32 +19,37 @@
 	"massdns": {
 		"note": "Command not yet working",
 		"command": "python ~/tools/subbrute/subbrute.py WORDLIST TARGET  | massdns -r /root/tools/massdns/ -t A -o -w OUTPUT",
-		"input": "scope/wildcard_domains.txt",
+		"infile": "scope/wildcard_domains.txt",
+		"intype": "target",
 		"wordlist": "/usr/share/wordlists/all.txt",
 		"category": "subdomain_enumeration",
 		"type": "domain"
 		},
 	"amass_passive": {
 		"command": "amass -passive -ip -src -df INPUT -oA OUTPUT",
-		"input": "scope/wildcard_domains.txt",
+		"infile": "scope/wildcard_domains.txt",
+		"intype": "target",
 		"category": "osint",
 		"type": "domain"
 		},
 	"aquatone": {
 		"command": "cat INPUT | aquatone -out OUTPUT",
-		"input": "scope/discovered_hosts.txt",
+		"infile": "scope/discovered_hosts.txt",
+		"intype": "target",
 		"category": "visual_enumeration",
 		"type": "both"
 		},
 	"masscan": {
 		"command": "masscan -p1-65535 INPUT --max-rate 1000 |& tee OUTPUT",
-		"input": "all_discovered_domains.txt",
+		"infile": "all_discovered_domains.txt",
+		"intype": "file",
 		"category": "port_scan",
 		"type": "ip"
 	},
 	"recursebuster": {
 		"command": "recursebuster -ajax -noui -clean -u INPUT -w WORDLIST -o OUTPUT",
-		"input": "",
+		"infile": "",
+		"intype": "target",
 		"wordlist": "/usr/share/wordlists/all.txt",
 		"category": "content_discovery",
 		"type": "both"
