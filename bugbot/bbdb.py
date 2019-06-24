@@ -204,7 +204,7 @@ class bbdb:
 
         # Should add given information into the database.
         try:
-            cursor.execute('INSERT INTO scan_info (target, company, scan_id, scan_tool, scan_category, scan_command, scan_status) VALUES (?, ?, ?, ?, ?, ?, ?)',\
+            cursor.execute('INSERT INTO scan_info (target, company, scan_id, scan_tool, scan_command, scan_category, scan_status) VALUES (?, ?, ?, ?, ?, ?, ?)',\
                 (target, self.company, scan_data['scan_id'], scan_data['tool'], scan_data['command'], scan_data['category'], scan_data['status']))
             connection.commit() 
             connection.close()
@@ -445,20 +445,19 @@ class bbdb:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT * FROM schedule_info WHERE active=1', \
-                (start_time, end_time, target, self.company))
+            cursor.execute('SELECT * FROM schedule_info WHERE active=1')
             return [dict(row) for row in cursor.fetchall()]
 
         except Exception as e:
             print(e)
             return -1
 
-    def get_schedules_by_company(self, company):
+    def get_schedule_by_company(self, company):
         connection = sqlite3.connect(self.db_name)
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT * FROM schedule_info WHERE company=?', \
+            cursor.execute('SELECT id, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE company=?', \
                 (company, ))
             return [dict(row) for row in cursor.fetchall()]
 
@@ -466,13 +465,26 @@ class bbdb:
             print(e)
             return -1
 
-    def get_schedules_by_target(self, target):
+    def get_schedule_by_target(self, target):
         connection = sqlite3.connect(self.db_name)
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT * FROM schedule_info WHERE target=?', \
+            cursor.execute('SELECT id, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE target=?', \
                 (target, ))
+            return [dict(row) for row in cursor.fetchall()]
+
+        except Exception as e:
+            print(e)
+            return -1
+
+    def get_schedule_by_id(self, schedule_id):
+        connection = sqlite3.connect(self.db_name)
+        connection.row_factory = sqlite3.Row
+        cursor= connection.cursor();
+        try:
+            cursor.execute('SELECT id, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE id=?', \
+                (schedule_id, ))
             return [dict(row) for row in cursor.fetchall()]
 
         except Exception as e:

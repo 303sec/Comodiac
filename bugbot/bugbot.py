@@ -268,9 +268,13 @@ class bugbot:
         #    For each of the entries, compare the last_run and the schedule_interval fields
         #    If difference between now and last_run is greater than schedule_interval, execute the command
         all_schedules = self.db.get_active_schedules()
+        print(all_schedules)
         for schedule in all_schedules:
-            last_run = schedule['last_run']
-            time_since_last_run = timestamp() - last_run
+            if schedule['last_run'] == None:
+                last_run = 0
+            else:
+                last_run = schedule['last_run']
+            time_since_last_run = self.timestamp() - last_run
             interval = schedule['schedule_interval']
 
             if schedule['last_run'] == None or interval < time_since_last_run:
@@ -284,12 +288,42 @@ class bugbot:
                     wordlist = schedule['wordlist']
 
                 if schedule['use_category'] == 0:            
-                    run_tool(schedule['tool'], schedule['target'], wordlist)
+                    self.run_tool(schedule['tool'], schedule['target'], wordlist)
                 elif schedule['use_category'] == 1:
-                    run_tools_by_category(schedule['tool'], schedule['target'], wordlist)
+                    self.run_tools_by_category(schedule['tool'], schedule['target'], wordlist)
                 else:
                     self.verbose_print('this should not ever happen.')
         return 0
+
+    def get_schedule(self, target=None, schedule_id=None, all=None):
+
+        if target is None and schedule_id is None:
+            results = self.db.get_schedule_by_company(self.company_name)
+        elif target is not None and schedule_id is None:
+            results = self.db.get_schedule_by_target(target)
+        elif schedule_id is not None and target is None:
+            results = self.db.get_schedule_by_id(schedule_id)
+        else:
+            return -1
+        parsed_table_list = []
+        parsed_table_headers = []
+        # Get the header array
+        for key, item in results[0].items():
+            parsed_table_headers.append(key)
+
+        parsed_table_list.append(parsed_table_headers)
+
+        for result in results:
+            result_list = []
+            for key, item in results[0].items():
+                result_list.append(item)
+            parsed_table_list.append(result_list)
+
+        return parsed_table_list
+
+
+
+        
 
 
 
@@ -310,7 +344,7 @@ class bugbot:
                     except:
                         self.verbose_print('[+] Directory', output_dir, 'found.')
                         pass
-                    output_file = output_dir + '/' + tool + '.' + str(timestamp())
+                    output_file = output_dir + '/' + tool + '.' + str(self.timestamp())
                     # Check that the tool actually uses a wordlist
                     if 'WORDLIST' in tool_options['command']:
                         # If no wordlist supplied, use the wordlist given as a param
@@ -319,7 +353,7 @@ class bugbot:
                     # Replaces the placeholders in the scan.
                     command = tool_options['command'].replace('INPUT', target).replace('OUTPUT', output_file).replace('WORDLIST', wordlist)
                     # This should really popen another command, not call exec(). For the time being though (and testing) it stays.
-                    scan_id = target.strip() + tool + str(timestamp())
+                    scan_id = target.strip() + tool + str(self.timestamp())
                     scan_data = {'category': category, 'tool': tool, 'command': command, 'output': output_file, 'scan_id': scan_id, 'status': 'waiting'}
                     # Add the scan to db (before the threading stuff comes into play)
                     self.db.add_scan(target, scan)
@@ -345,7 +379,7 @@ class bugbot:
                     except:
                         self.verbose_print('[+] Directory', output_dir, 'found.')
                         pass
-                    output_file = output_dir + '/' + tool + '.' + str(timestamp())
+                    output_file = output_dir + '/' + tool + '.' + str(self.timestamp())
                     # Check that the tool actually uses a wordlist
                     if 'WORDLIST' in tool_options['command']:
                         # If no wordlist supplied, use the wordlist given as a param
@@ -354,7 +388,7 @@ class bugbot:
                     # Replaces the placeholders in the scan.
                     command = tool_options['command'].replace('INPUT', target).replace('OUTPUT', output_file).replace('WORDLIST', wordlist)
                     # This should really popen another command, not call exec(). For the time being though (and testing) it stays.
-                    scan_id = target.strip() + tool + str(timestamp())
+                    scan_id = target.strip() + tool + str(self.timestamp())
                     scan_data = {'category': tool_options['category'], 'tool': tool, 'command': command, 'output': output_file, 'scan_id': scan_id, 'status': 'waiting'}
                     # Add the scan to db (before the threading stuff comes into play)
                     self.verbose_print('[+] Adding scan to database.')
@@ -366,23 +400,12 @@ class bugbot:
                     threading.Thread(target=self.run_cmd, args=(target, scan_data)).start()
         return 0
 
-    # scan_data:
-    #    scan_id
-    #     tool
-    #     category
-    #     command
-    #     output
-    #    pid
-    #    status
-    #    id
-    #
-    #
 
     # Never accessed directly - run through threading.thread in run_tool*
     # @param: target: string: target name
     # @param: scan: dict: 
     def run_cmd(self, target, scan:dict):
-        # This command will essentially be run as it's own process via _thread
+        # This command will essentially be run as it's own process via threading
         # Need a scan dict containing:
         # scan['id'] = target, scan name & timestamp concatenated
         # scan['tool']
@@ -396,7 +419,7 @@ class bugbot:
         # Below could be used later for printing output to web interface.
         scan['pid'] = process.pid
         scan['status'] = 'started'
-        scan['started'] = timestamp()
+        scan['started'] = self.timestamp()
         self.db.start_scan(target,scan)
         # blocks processing until command is complete
         stdout, stderr = process.communicate()
@@ -407,7 +430,7 @@ class bugbot:
             scan['completed'] = ''
         else:
             scan['status'] = 'completed'
-            scan['completed'] = timestamp()
+            scan['completed'] = self.timestamp()
 
         self.db.scan_complete(target, scan)
 
@@ -472,7 +495,7 @@ class bugbot:
 
 
                     
-    def timestamp():
+    def timestamp(self):
         d = datetime.utcnow()
         unixtime = calendar.timegm(d.utctimetuple()) 
         return unixtime  

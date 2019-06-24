@@ -2,7 +2,7 @@ import click
 from bugbot import bugbot
 import json
 import uuid
-
+from terminaltables import AsciiTable
 
 # From stackoverflow - https://stackoverflow.com/questions/44247099/click-command-line-interfaces-make-options-required-if-other-optional-option-is
 class NotRequiredIf(click.Option):
@@ -43,7 +43,7 @@ def cli():
 @click.option('-xf', '--outofscopefile', help='File of out-of-scope target Domains and IPs', type=click.Path())
 def add_target(verbose, company, target, targetfile, outofscope, outofscopefile):
     if target is None and targetfile is None and outofscope is None and outofscopefile is None:
-        click.echo('[-] Error: at least one in scope or out of scope target or file required. Exiting.')
+        click.echo('[-] Error: at least one in-scope or out-of-scope target or file required. Exiting.')
         exit()
 
     bb = bugbot.bugbot(company, verbose)
@@ -160,8 +160,8 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
                 meta = tool_options['meta']
                 schedule_uuid = str(uuid.uuid4())
 
-                epoch_interval = bb.parse_interval(schedule_interval)
-                schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': epoch_interval, \
+                schedule_interval
+                schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': schedule_interval, \
                 'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'infile': infile, 'intype':intype, \
                 'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
                 bb.add_schedule(schedule)
@@ -175,6 +175,8 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-S', '--schedule-id', help='Schedule ID to edit')
 def view_schedule(verbose, company, target, schedule_id):
+    bb = bugbot.bugbot(company, verbose)
+    print(AsciiTable(bb.get_schedule(target, schedule_id)).table)
     return
 
 @cli.command()
@@ -218,6 +220,18 @@ def view_assets(verbose, company, target, tool, category, from_date, to_date):
     print(target)
     return
 
+@cli.command()
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
+@click.option('-c', '--company', help='Company Name')
+@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
+@click.option('-T', '--tool', help='Tool to schedule')
+@click.option('-C', '--category', help='Category of tools to schedule')
+@click.option('-fd', '--from-date', help='Start date of assets to view')
+@click.option('-td', '--to-date', help='End date of assets to view', default='today')
+def heartbeat(verbose, company, target, tool, category, from_date, to_date):
+    bb = bugbot.bugbot(company, verbose)
+    bb.scheduler()
+    return
 
 
 if __name__ == '__main__':
