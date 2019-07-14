@@ -1,5 +1,5 @@
 import click
-from bugbot import bugbot
+from bugbot import scheduling, scoping
 import json
 import uuid
 from terminaltables import AsciiTable
@@ -46,7 +46,7 @@ def add_target(verbose, company, target, targetfile, outofscope, outofscopefile)
         click.echo('[-] Error: at least one in-scope or out-of-scope target or file required. Exiting.')
         exit()
 
-    bb = bugbot.bugbot(company, verbose)
+    scope = scoping.scoping(company, verbose)
 
     # parse targets from file or CLI
     targets = []
@@ -68,19 +68,19 @@ def add_target(verbose, company, target, targetfile, outofscope, outofscopefile)
     if target or targetfile:
         print(targets)
         # Turns input into inscope_domains.txt & inscope_ips.txt
-        parsed_scope = bb.parse_scope_to_files(targets)
+        parsed_scope = scope.parse_scope_to_files(targets)
         print(parsed_scope)
         # Looks at the inscope_domains.txt file and generates a file with the wildcards as usable domains.
         # e.g. *.test.com inscope_domains.txt becomes test.com in wildcard_domains.
-        wildcards = bb.parse_wildcard_domains()
+        wildcards = scope.parse_wildcard_domains()
         # We create folders for each of the inscope targets, including wildcards
         for scoped_domain in parsed_scope['domain_list']:
-            bb.add_new_target(scoped_domain.strip())
+            scope.add_new_target(scoped_domain.strip())
         for scoped_ip in parsed_scope['ip_list']:
-            bb.add_new_target(scoped_ip.strip())
+            scope.add_new_target(scoped_ip.strip())
 
     if outofscope or outofscopefile:
-        bb.parse_scope_to_files(targets, False)
+        scope.parse_scope_to_files(targets, False)
 
 
 @cli.command()
@@ -110,11 +110,12 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
         print('Categories not yet supported! Exiting.')
         exit()
 
-    bb = bugbot.bugbot(company, verbose)
+    scope = scoping.scoping(company, verbose)
+    scheduler = scheduling.scheduling(verbose)
 
 
     # Need to check if the target exists. This would be easier if there was a database for the targets...
-    if not bb.does_target_exist(target):
+    if not scope.does_target_exist(target):
         click.echo('[-] Error: Target not found. Exiting.')
         exit()
         # add_target(verbose, company, target, None, None, None)
@@ -135,6 +136,8 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
     # schedule['parser']: the parser regular expression to use on the output file. From tools.json
     # schedule['meta']: any extra functions to perform post-scan. From tools.json
 
+
+    # This logic probably needs to be moved to scheduling.py at some point.
     if category:
         tool = category
         use_category = 1
@@ -152,9 +155,9 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
                 else:
                     wordlist = None
                 if tool_options['intype'] == 'file':
-                    infile = tool_options['infile']
+                    schedule_input = tool_options['input']
                 else:
-                    infile = None
+                    schedule_input = target
                 intype = tool_options['intype']
                 parser = tool_options['parse_result']
                 meta = tool_options['meta']
@@ -162,9 +165,9 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
 
                 schedule_interval
                 schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': schedule_interval, \
-                'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'infile': infile, 'intype':intype, \
+                'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'input': schedule_input, 'intype':intype, \
                 'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
-                bb.add_schedule(schedule)
+                scheduler.add_schedule(schedule)
     if tool_found == False:
         click.echo('[-] Tool not found.')
 	
@@ -175,8 +178,8 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-S', '--schedule-id', help='Schedule ID to edit')
 def view_schedule(verbose, company, target, schedule_id):
-    bb = bugbot.bugbot(company, verbose)
-    print(AsciiTable(bb.get_schedule(target, schedule_id)).table)
+    scheduler = scheduling.scheduling(verbose)
+    print(AsciiTable(scheduler.get_schedule(company, target, schedule_id)).table)
     return
 
 @cli.command()
@@ -189,6 +192,7 @@ def view_schedule(verbose, company, target, schedule_id):
 @click.option('-a', '--alert', help='Alert options', default='default')
 @click.option('-p', '--pause', is_flag=True, help='Pause or unpause scan')
 def edit_schedule(verbose, company, target, schedule_interval, schedule_id, alert, pause):
+
     return
 
 @cli.command()
@@ -201,9 +205,25 @@ def delete_schedule(verbose, company, target, schedule_interval, schedule_id, al
 @click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
-@click.option('-T', '--tool', help='Tool to schedule')
-@click.option('-C', '--category', help='Category of tools to schedule')
-def scan_now(verbose, company, target, tool, category):
+@click.option('-T', '--tool', help='Tool to run')
+@click.option('-C', '--category', help='Category of tools to run')
+@click.option('-S', '--schedule-id', help='Scheduled scan to run now')
+def scan_now(verbose, company, target, tool, category, schedule_id):
+    scheduler = scheduling.scheduling(verbose)
+    if tool and category:
+        click.echo('[-] Can only have either tool or category. Exiting.')
+        exit()
+    if schedule_id:
+        click.echo('[+] Scanning by Schedule ID')
+        scheduler.immediate_scan(None, None, None, schedule_id)
+    elif target and company and tool:
+        click.echo('[+] Scanning by supplied tool, target & company')
+        scheduler.immediate_scan(company, target, tool)
+    elif target and company and category:
+        click.echo('[+] Scanning by category not yet supported.')
+        # scheduler.immediate_scan(company, target, category)
+    else:
+        print('Incorrect options given. Exiting.')
     return
 
 
@@ -220,7 +240,7 @@ def view_assets(verbose, company, target, tool, category, from_date, to_date):
     print(target)
     return
 
-@cli.command()
+@cli.command(hidden=True)
 @click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
@@ -229,8 +249,8 @@ def view_assets(verbose, company, target, tool, category, from_date, to_date):
 @click.option('-fd', '--from-date', help='Start date of assets to view')
 @click.option('-td', '--to-date', help='End date of assets to view', default='today')
 def heartbeat(verbose, company, target, tool, category, from_date, to_date):
-    bb = bugbot.bugbot(company, verbose)
-    bb.scheduler()
+    scheduler = scheduling.scheduling(verbose)
+    scheduler.heartbeat()
     return
 
 

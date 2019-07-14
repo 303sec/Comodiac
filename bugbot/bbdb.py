@@ -70,7 +70,7 @@ class bbdb:
     wordlist            TEXT,
     last_run            DATE,
     last_scan_id        INTEGER,
-    infile              TEXT NOT NULL,
+    input              TEXT NOT NULL,
     intype              TEXT NOT NULL,
     # can be set to either file or asset
     # file = filename = input. asset = every line of file = input.
@@ -82,10 +82,10 @@ class bbdb:
 
 
     """
-    def __init__(self, base_dir, company):
+    
+    def __init__(self, base_dir):
         # Create base db (bb.db) scan_info and asset tables
         # Check to see if the database exists. If not, create it.
-        self.company = company
 
         self.db_name = base_dir + '/bb.db'
         
@@ -135,7 +135,7 @@ class bbdb:
                 company TEXT NOT NULL,
                 schedule_interval INT NOT NULL,
                 schedule_uuid TEXT NOT NULL,
-                infile TEXT NOT NULL,
+                input TEXT NOT NULL,
                 intype TEXT NOT NULL,
                 parser TEXT NOT NULL,
                 tool TEXT NOT NULL,
@@ -163,13 +163,13 @@ class bbdb:
     # Though that said the scheduler kind of fits that niche. Might not be worth it.
 
 
-    def add_target(self, target, target_dir):
+    def add_target(self, company, target, target_dir):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
             cursor.execute('INSERT INTO targets (target, target_dir, company) VALUES (?,?,?)',\
-                (target, target_dir, self.company))
+                (target, target_dir, company))
             connection.commit() 
             connection.close()
 
@@ -198,14 +198,14 @@ class bbdb:
     #   scan['command']
     #   scan['category']
     #   scan['status'] == waiting
-    def add_scan(self, target, scan_data:dict):
+    def add_scan(self, company, target, scan_data:dict):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
 
         # Should add given information into the database.
         try:
             cursor.execute('INSERT INTO scan_info (target, company, scan_id, scan_tool, scan_command, scan_category, scan_status) VALUES (?, ?, ?, ?, ?, ?, ?)',\
-                (target, self.company, scan_data['scan_id'], scan_data['tool'], scan_data['command'], scan_data['category'], scan_data['status']))
+                (target, company, scan_data['scan_id'], scan_data['tool'], scan_data['command'], scan_data['category'], scan_data['status']))
             connection.commit() 
             connection.close()
             return 0
@@ -221,13 +221,13 @@ class bbdb:
     #   scan['started']
     #   scan['status'] == started
     #   scan['id']
-    def start_scan(self, target, scan_data:dict):
+    def start_scan(self, company, target, scan_data:dict):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
             cursor.execute('UPDATE scan_info SET scan_pid=?, scan_started=?, scan_status=?, scan_outfile=? WHERE scan_id=? AND target=? AND company=?',\
-                (scan_data['pid'], scan_data['started'], scan_data['status'], scan_data['output'], scan_data['scan_id'], target, self.company))
+                (scan_data['pid'], scan_data['started'], scan_data['status'], scan_data['output'], scan_data['scan_id'], target, company))
             connection.commit() 
             connection.close()
             return 0
@@ -238,13 +238,15 @@ class bbdb:
         return 0
 
 
-    def scan_complete(self, target, scan_data:dict):
+    def scan_complete(self, company, target, scan_data:dict):
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
             cursor.execute('UPDATE scan_info SET scan_completed=?, scan_status=? WHERE scan_id=? AND target=? AND company=?',\
-                (scan_data['completed'], scan_data['status'], scan_data['scan_id'], target, self.company))
+                (scan_data['completed'], scan_data['status'], scan_data['scan_id'], target, company))
+            cursor.execute('UPDATE schedule_info SET last_run=?, last_scan_uuid=? WHERE tool=? AND target=? AND company=?',
+                (scan_data['completed'], scan_data['scan_uuid'], scan_data['tool'], target, company))
             connection.commit() 
             connection.close()
             return 0
@@ -292,12 +294,12 @@ class bbdb:
         return 0
 
 
-    def get_assets_by_category(self, target, asset_category):
+    def get_assets_by_category(self, company, target, asset_category):
         connection = sqlite3.connect(self.db_name)
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT * FROM assets WHERE asset_category=? AND target=? AND company=?', (asset_category, target, self.company))
+            cursor.execute('SELECT * FROM assets WHERE asset_category=? AND target=? AND company=?', (asset_category, target, company))
             result = cursor.fetchall()
             return [dict(row) for row in cursor.fetchall()]
 
@@ -305,24 +307,24 @@ class bbdb:
             print(e)
             return -1
 
-    def get_assets_by_type(self, target, asset_type):
+    def get_assets_by_type(self, company, target, asset_type):
         connection = sqlite3.connect(self.db_name)
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT * FROM assets WHERE asset_type=? AND target=? AND company=?', (asset_type, target, self.company))
+            cursor.execute('SELECT * FROM assets WHERE asset_type=? AND target=? AND company=?', (asset_type, target, company))
             return [dict(row) for row in cursor.fetchall()]
 
         except Exception as e:
             print(e)
             return -1        
 
-    def get_assets_by_content(self, target, asset_content):
+    def get_assets_by_content(self, company, target, asset_content):
         connection = sqlite3.connect(self.db_name)
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT * FROM assets WHERE asset_content=? AND target=? AND company=?', (asset_content, target, self.company))
+            cursor.execute('SELECT * FROM assets WHERE asset_content=? AND target=? AND company=?', (asset_content, target, company))
             return [dict(row) for row in cursor.fetchall()]
 
         except Exception as e:
@@ -330,7 +332,7 @@ class bbdb:
             return -1
 
 
-    def get_assets_between_dates(self, target, start_date, end_date=None):
+    def get_assets_between_dates(self, company, target, start_date, end_date=None):
         if end_date==None:
             end_date = datetime.datetime.now()
         connection = sqlite3.connect(self.db_name)
@@ -338,7 +340,7 @@ class bbdb:
         cursor= connection.cursor();
         try:
             cursor.execute('SELECT * FROM assets WHERE target= ? AND company= ? AND scan_date BETWEEN ? AND ?', \
-                (start_time, end_time, target, self.company))
+                (start_time, end_time, target, company))
             return [dict(row) for row in cursor.fetchall()]
 
         except Exception as e:
@@ -372,7 +374,7 @@ class bbdb:
         wordlist            TEXT,
         last_run            DATE,
         last_scan_id        INTEGER,
-        infile              TEXT NOT NULL,
+        input              TEXT NOT NULL,
         intype              TEXT NOT NULL,
         # can be set to either file or asset
         # file = filename = input. asset = every line of file = input.
@@ -386,7 +388,7 @@ class bbdb:
         company TEXT NOT NULL,
         schedule_interval INT NOT NULL,
         schedule_uuid TEXT NOT NULL,
-        infile TEXT NOT NULL,
+        input TEXT NOT NULL,
         intype TEXT NOT NULL,
         parser TEXT NOT NULL,
         tool TEXT NOT NULL,
@@ -408,10 +410,10 @@ class bbdb:
         # Should add given information into the database.
         try:
             cursor.execute('INSERT INTO schedule_info (active, target, company, schedule_interval, \
-                tool, use_category, wordlist, infile, intype, \
+                tool, use_category, wordlist, input, intype, \
                 parser, meta, schedule_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
                 (schedule['active'], schedule['target'], schedule['company'], schedule['schedule_interval'], \
-                    schedule['tool'], schedule['use_category'], schedule['wordlist'], schedule['infile'], \
+                    schedule['tool'], schedule['use_category'], schedule['wordlist'], schedule['input'], \
                     schedule['intype'], schedule['parser'], schedule['meta'], schedule['uuid']))
             # There will definintely be errors... not everything has all these values.
             # Could set them to blank on the way in?
