@@ -13,7 +13,7 @@
 		"category": "subdomain_enumeration",
 		"intype": "file",
 		"type": "domain",
-		"parse_result": "",
+		"parse_result": "regex",
 		"meta": "add_"
 		},
 	"massdns": {

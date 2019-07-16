@@ -86,7 +86,6 @@ class bbdb:
         # Create base db (bb.db) scan_info and asset tables
         # Check to see if the database exists. If not, create it.
         self.company = company
-
         self.db_name = base_dir + '/bb.db'
         
         if not os.path.exists(self.db_name):
@@ -457,7 +456,7 @@ class bbdb:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT id, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE company=?', \
+            cursor.execute('SELECT id, tool, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE company=?', \
                 (company, ))
             return [dict(row) for row in cursor.fetchall()]
 
@@ -470,7 +469,7 @@ class bbdb:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT id, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE target=?', \
+            cursor.execute('SELECT id, tool, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE target=?', \
                 (target, ))
             return [dict(row) for row in cursor.fetchall()]
 
@@ -483,7 +482,7 @@ class bbdb:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT id, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE id=?', \
+            cursor.execute('SELECT id, tool, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE id=?', \
                 (schedule_id, ))
             return [dict(row) for row in cursor.fetchall()]
 

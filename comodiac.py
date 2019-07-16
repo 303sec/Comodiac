@@ -42,6 +42,7 @@ def cli():
 @click.option('-x', '--outofscope', help='Out-of-scope Domain or IP in a comma delimited list')
 @click.option('-xf', '--outofscopefile', help='File of out-of-scope target Domains and IPs', type=click.Path())
 def add_target(verbose, company, target, targetfile, outofscope, outofscopefile):
+    """ Adds a target to the bb folder """
     if target is None and targetfile is None and outofscope is None and outofscopefile is None:
         click.echo('[-] Error: at least one in-scope or out-of-scope target or file required. Exiting.')
         exit()
@@ -88,6 +89,7 @@ def add_target(verbose, company, target, targetfile, outofscope, outofscopefile)
 @click.option('-c', '--company', help='Company Name')
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 def view_target(verbose, company, target):
+    """ View all targets associated with a given company """
     print('View-target functionality is todo.')
 
 @cli.command()
@@ -100,6 +102,8 @@ def view_target(verbose, company, target):
 @click.option('-p', '--preset', help='Schedule Preset')
 @click.option('-a', '--alert', help='Alert options', default='default')
 def add_schedule(verbose, company, target, schedule_interval, tool, category, preset, alert):
+    """ Adds a scheduled scan to the specified target """
+
     if tool is None and preset is None and category is None:
         click.echo('[-] Error: at least one tool, category or preset required. Exiting.')
         exit()
@@ -175,6 +179,7 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-S', '--schedule-id', help='Schedule ID to edit')
 def view_schedule(verbose, company, target, schedule_id):
+    """ View a scheduled scan by target, company or schedule id """
     bb = bugbot.bugbot(company, verbose)
     print(AsciiTable(bb.get_schedule(target, schedule_id)).table)
     return
@@ -189,12 +194,14 @@ def view_schedule(verbose, company, target, schedule_id):
 @click.option('-a', '--alert', help='Alert options', default='default')
 @click.option('-p', '--pause', is_flag=True, help='Pause or unpause scan')
 def edit_schedule(verbose, company, target, schedule_interval, schedule_id, alert, pause):
+    """ Edit a scheduled scan by the schedule ID """
     return
 
 @cli.command()
 @click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
 @click.option('-S', '--schedule-id', help='Schedule ID to edit')
 def delete_schedule(verbose, company, target, schedule_interval, schedule_id, alert, pause):
+    """ Remove a scheduled scan by the schedule ID """
     return
 
 @cli.command()
@@ -204,6 +211,7 @@ def delete_schedule(verbose, company, target, schedule_interval, schedule_id, al
 @click.option('-T', '--tool', help='Tool to schedule')
 @click.option('-C', '--category', help='Category of tools to schedule')
 def scan_now(verbose, company, target, tool, category):
+    """ Immediately perform a given scan """
     return
 
 
@@ -216,19 +224,29 @@ def scan_now(verbose, company, target, tool, category):
 @click.option('-fd', '--from-date', help='Start date of assets to view')
 @click.option('-td', '--to-date', help='End date of assets to view', default='today')
 def view_assets(verbose, company, target, tool, category, from_date, to_date):
+    """ View the latest assets from a given target or company """
     print(company)
     print(target)
     return
 
-@cli.command()
-@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
-@click.option('-c', '--company', help='Company Name')
-@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
-@click.option('-T', '--tool', help='Tool to schedule')
-@click.option('-C', '--category', help='Category of tools to schedule')
-@click.option('-fd', '--from-date', help='Start date of assets to view')
-@click.option('-td', '--to-date', help='End date of assets to view', default='today')
+@cli.command(hidden=True)
+@click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity', hidden=True)
+@click.option('-c', '--company', help='Company Name', hidden=True)
+@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list', hidden=True)
+@click.option('-T', '--tool', help='Tool to schedule', hidden=True)
+@click.option('-C', '--category', help='Category of tools to schedule', hidden=True)
+@click.option('-fd', '--from-date', help='Start date of assets to view', hidden=True)
+@click.option('-td', '--to-date', help='End date of assets to view', default='today', hidden=True)
 def heartbeat(verbose, company, target, tool, category, from_date, to_date):
+    """ This is the scheduler's hearbeat. It should only be run by cron, not by the user. """
+
+    # ISSUE:
+    # We need a working bb object for this to work. However, we also don't have a company name or any init variables to add, because this just gets all the scheduled items an dworks with those.
+    # So the following solutions are proposed:
+    # 1 - Remove the need for anything in the __init__ and fix all the dependencies on any self.* variables
+    # 2 - Hack it by adding a heartbeat company / target that works differently (I don't think this will work)
+    # 3 - Create a scheduler/heartbeat class that takes all the required bits from bb.
+    # I think 3 makes the most sense. 
     bb = bugbot.bugbot(company, verbose)
     bb.scheduler()
     return
