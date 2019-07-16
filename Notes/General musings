@@ -144,4 +144,53 @@ Credential bruteforce (probably not worth it):
 
 
 
-Important to note: the tools.json file needs more placeholders, for example 
+Important to note: the tools.json file needs more placeholders linke INPUT and OUTPUT.
+
+add-targets
+1 - Parse the cli / file into inscope*.txt
+2 - Parse any wildcard domains into wildcard*.txt
+3 - Create folders for each of the items in inscope*.txt, containing a notes folder.
+
+
+
+Issue: The difference between single targets and file inputs, and the way regular expressions deal with that.
+Fix 1: Have regexs that include the TARGET placeholder. Bit hack-y (we'd need to escape things like any dots or slashes), but might be the best option.
+Fix 2: Only have single targets as input and when it's a file just run the tool on a loop through the targets in the file
+Notes: Considering the tools in use is really important. 
+
+
+
+Issue: the 'meta' field might be a bit too complicated. Currently considering it to be a list of conditionals with logic attached. Worth considering whether or not it's relevant.
+Why the meta field is relevant:
+    - Meta is useful in creating sub-folders within a target
+    - Meta can be used to tie results together in certain ways
+    - Allows for extra flexibility, and only need to implement extra functionality when used
+    - Can be a low priority feature until there is a dealbreaker.
+
+These are the proposed initial 'meta' options:
+- meta: for scans that require extra functionalty to perform on the found assets after the scan.
+    - add_domain = Adds the asset as a discovered domain
+        - Useful for domains discovered through reverse DNS lookups, etc.
+    - add_ip = Adds the asset as a disovered IP
+        - We'll certainly find IP addresses when looking at domain names.
+    - create_asset_dir = Create a dir for the discovered asset
+        - we'll want to know the 'host' of the asset, and we'll add this as a sub asset
+    - publish_to_web = Haven't figured out details, but should be able to add to make some kind of symlink in var/www to this folder.  
+
+
+
+
+So just to make some quick notes whilst thinking about this:
+
+step by step enumeration:
+
+Subdomain discovery
+Input: wildcard_domains.txt
+Output: discovered_hosts.txt
+
+Content discovery
+Input: discovered_hosts.txt in filesystem OR some kind of database entry for discovered hosts.
+Output: (wildcard)/target/discovered_content.txt
+
+Okay, this is a bit clearer now! So we need a way of labelling the 'type' of data in the db in order to use the INPUT side of things correctly.
+For example, 

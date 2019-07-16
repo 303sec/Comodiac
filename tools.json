@@ -4,7 +4,8 @@
 		"category": "content_monitor",
 		"intype": "target",
 		"type": "both",
-		"parse_result": ""
+		"parse_result": "",
+		"meta" : ""
 		},
 	"amass_active": {
 		"command": "amass -active -brute -ip -src -d INPUT -oA OUTPUT -w WORDLIST",
