@@ -177,6 +177,10 @@ These are the proposed initial 'meta' options:
         - we'll want to know the 'host' of the asset, and we'll add this as a sub asset
     - publish_to_web = Haven't figured out details, but should be able to add to make some kind of symlink in var/www to this folder.  
 
+UPDATE: meta has been replaced with filesystem.
+Now we can parse things like discovered hosts appropriately with the database, we probably won't need add_domain. Maybe.
+The important things will be creating asset directory
+
 
 
 
@@ -194,3 +198,84 @@ Output: (wildcard)/target/discovered_content.txt
 
 Okay, this is a bit clearer now! So we need a way of labelling the 'type' of data in the db in order to use the INPUT side of things correctly.
 For example, 
+
+
+
+Issue:
+We need to determine how the inputs and outputs works. We can get different inputs in the form of single targets or files - which can reference other scan types. 
+
+Different inputs: 
+- Discovered content
+- Discovered domains
+- Discovered IPs
+- Single domain
+- Single IP
+Note that all of these must be in scope, so we'll need to check the scope on these.
+
+Different outputs:
+- Files on filesystem
+- Results parsed into database for alerting
+- Add to discovered content
+
+One of the difficulties here is knowing what to put on the filesystem and what to have in the database.
+Ideally, the database will have all the information, whilst the filesystem will have everything structured nicely to help with organisation.
+
+Discovered Content is the important factor here. When it comes to looking at data, we need to find all unique things that have been discovered - content, domains, IPs, etc. The issue is that it's difficult to differentiate data in a way that is flexible and works for all edge cases. For example, we'll be performing the following kind of scans:
+
+content_discovery:
+ - Spidering
+ - Parse JS files
+ - gobuster
+
+content_monitoring:
+ - Check to see if the content_length of response has changed by more than 5%. 
+ - INPUT: All discovered content
+ - OUTPUT: content_length
+
+visual_enumeration:
+ - 
+
+
+This is the list from General Musings:
+
+Categories:
+OSINT:
+    - Whois
+    - Is the IP Address a CDN?
+    - Not really sure about this one
+Subdomain enumeration
+    - Amass
+    - Subfinder
+Domain Enumeration
+    - Massdns + generated wordlist
+Content Monitoring
+    - Checking the content for changes in content-length (?)
+    - Checking if port is still open (or, if previously closed, is open again)
+    - Checking if an IP address is still alive (or, if previously non-live, is live again)
+Content Discovery
+    - Spidering (Need some kind of tool to do this)
+    - Javascript Parsing
+Content Bruteforcing
+    - Gobuster / Recursebuster
+    - Parameter bruteforcing (Parameth)
+Visual Enumeration
+    - Aquatone, screenshot EVERYTHING
+    - Eyewitness(?)
+Port Scan
+    - nmap scripts on found open ports
+    - massscan for open ports
+Non-intrusive vuln scan
+    - CDN Bypass
+    - Subdomain Takeover
+intrusive vuln scan
+    - sqlmap
+    - bxss
+Credential bruteforce (probably not worth it):
+    - brutespray
+
+
+
+
+
+
+

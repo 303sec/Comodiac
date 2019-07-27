@@ -213,11 +213,15 @@ def delete_schedule(verbose, company, target, schedule_interval, schedule_id, al
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-T', '--tool', help='Tool to schedule')
 @click.option('-C', '--category', help='Category of tools to schedule')
-def scan_now(verbose, company, target, tool, category):
-    """ Immediately perform a given scan """
+@click.option('-S', '--schedule-id', help='Schedule ID to run')
+def scan_now(verbose, company, target, tool, category, schedule_id):
+    """ Immediately perform a given scan. Currently not working - to do. """
     scheduler = scheduling.scheduling(verbose)
     if tool and category:
         click.echo('[-] Can only have either tool or category. Exiting.')
+        exit()
+    if target and not company:
+        click.echo('[-] Requires both target and company. Exiting.')
         exit()
     if schedule_id:
         click.echo('[+] Scanning by Schedule ID')
@@ -249,13 +253,7 @@ def view_assets(verbose, company, target, tool, category, from_date, to_date):
 
 @cli.command(hidden=True)
 @click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
-@click.option('-c', '--company', help='Company Name')
-@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
-@click.option('-T', '--tool', help='Tool to schedule')
-@click.option('-C', '--category', help='Category of tools to schedule')
-@click.option('-fd', '--from-date', help='Start date of assets to view')
-@click.option('-td', '--to-date', help='End date of assets to view', default='today')
-def heartbeat(verbose, company, target, tool, category, from_date, to_date):
+def heartbeat(verbose):
     scheduler = scheduling.scheduling(verbose)
     scheduler.heartbeat()
     return

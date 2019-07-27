@@ -15,12 +15,16 @@ from .bbdb import bbdb
 import shlex
 import threading
 import math
+import re
+from urllib.parse import urlparse
 
 class util:
     def __init__(self):
         return
 
     # This function has been basically tested, but not much. It returns none when it doesn't know, which is bad!
+    # Should probaby use a module for this instead of my bad regex here.
+    # urlparse would be good for the difference between URL and 
     def ip_domain_url(self, target):
         if re.match('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', target):
             self.verbose_print('[+]', target, 'identified as IP address.')
@@ -53,6 +57,22 @@ class util:
                 print('[-] Fatal error parsing given interval', interval)
                 exit()
         return parsed_interval
+
+
+    # Need to finish this function. Should marry up input format and output format.
+    def format_parser(self, in_format, out_format, in_data):
+        # removes and splits by any non-alphanumeric characters. If there are multiple symbols it creates whitespace, hence the filter.
+        in_format_items = list(filter(None, re.split('[^a-zA-Z]', in_format)))
+        out_format_items = list(filter(None, re.split('[^a-zA-Z]', out_format)))
+        # Should be something like ['scheme', 'host', 'port']
+        in_data_parsed = urlparse(in_data)
+
+
+
+
+
+        # returns data parsed for output. Coverts the in_data to out_data
+
 
                     
     def timestamp(self):

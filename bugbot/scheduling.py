@@ -148,7 +148,7 @@ class scheduling:
             tools = json.loads(tools_file.read())
             for tool, tool_options in tools.items():
                 if category == tool_options['category']:
-                    output_dir = self.company_dir + '/targets/' + self.util.ip_domain_url(target) +  '/' + target + '/' + category + '/' + tool + '/' + datetime.today().strftime('%d%m%Y')
+                    output_dir = self.company_dir + '/targets/' + '/' + target + '/' + category + '/' + tool + '/' + datetime.today().strftime('%d%m%Y')
                     try:
                         os.makedirs(output_dir)
                     except:
@@ -182,7 +182,7 @@ class scheduling:
             tools = json.loads(tools_file.read())
             for tool, tool_options in tools.items():
                 if tool_name == tool:
-                    output_dir = self.base_dir + '/' + company + '/targets/' + self.util.ip_domain_url(target) +  's/' + target + '/' + tool_options['category'] + '/' + tool + '/' + str(datetime.today().strftime('%d%m%Y'))
+                    output_dir = self.base_dir + '/' + company + '/targets/' target + '/' + tool_options['category'] + '/' + tool + '/' + str(datetime.today().strftime('%d%m%Y'))
                     try:
                         os.makedirs(output_dir)
                         self.util.verbose_print('[+] Creating directory', output_dir, '.')

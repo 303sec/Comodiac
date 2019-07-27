@@ -75,10 +75,10 @@ class scoping:
         # Avoid any silly dir issues
         target = target.replace('/', '-')
         if wildcard_root == None:
-            target_dir = self.company_dir + '/targets/' + self.util.ip_domain_url(target) + 's/' + target
+            target_dir = self.company_dir + '/targets/' + target
             target_notes_dir = target_dir + '/notes'
         else:
-            target_dir = self.company_dir + '/targets/' + self.util.ip_domain_url(target) + 's/' + wildcard_root + '/' + target
+            target_dir = self.company_dir + '/targets/' + wildcard_root + '/' + target
 
 
 
@@ -96,7 +96,6 @@ class scoping:
         #    pass
 
     def does_target_exist(self, target):
-        print(self.db.get_target_dir(target))
         if not self.db.get_target_dir(target):
             return False
         elif self.db.get_target_dir(target):

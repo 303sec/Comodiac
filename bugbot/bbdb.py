@@ -43,6 +43,17 @@ class bbdb:
     target:               TEXT NOT NULL
     company:              TEXT NOT NULL
     asset_type:           TEXT NOT NULL
+    # To allow for 'input'
+    asset_format:         TEXT NOT NULL
+    # Assist with requirements for parsing
+    # For example - gobuster just needs the /xxx bit of the URL.
+    # So format = full_url means we can parse out the end for gobuster
+    # We need input format in the tools too, it seems.
+    # Format types:
+    # scheme://host:port/path?query
+    # (and all variations. Delimiter is -)
+
+
     asset_content:        TEXT NOT NULL
     scan_completed:       DATE NOT NULL
     scan_id               INTEGER NOT NULL
@@ -237,20 +248,22 @@ class bbdb:
         return 0
 
 
+    # When a scan is complete, update the scan_info table with the relevant info ()
     def scan_complete(self, company, target, scan_data:dict):
+        print(scan_data)
         connection = sqlite3.connect(self.db_name)
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
-            cursor.execute('UPDATE scan_info SET scan_completed=?, scan_status=? WHERE scan_id=? AND target=? AND company=?',\
+            cursor.execute('UPDATE scan_info SET scan_completed=?, scan_status=?, scan_pid="" WHERE scan_id=? AND target=? AND company=?',\
                 (scan_data['completed'], scan_data['status'], scan_data['scan_id'], target, company))
-            cursor.execute('UPDATE schedule_info SET last_run=?, last_scan_uuid=? WHERE tool=? AND target=? AND company=?',
-                (scan_data['completed'], scan_data['scan_uuid'], scan_data['tool'], target, company))
+            cursor.execute('UPDATE schedule_info SET last_run=?, last_scan_id=? WHERE tool=? AND target=? AND company=?',
+                (scan_data['completed'], scan_data['scan_id'], scan_data['tool'], target, company))
             connection.commit() 
             connection.close()
             return 0
         except Exception as e:
-            print('[-] Database error in start_scan:')
+            print('[-] Database error in scan_complete:')
             print(e)
             return -1
         return 0
