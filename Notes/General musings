@@ -279,3 +279,115 @@ Credential bruteforce (probably not worth it):
 
 
 
+Figure out how the parsing & assets will work
+    - Parsing: Regex to be performed on every line of the output file
+    - returns a list of all parsed assets
+    - These parsed assets get put into the database
+    - Every time a new scan is completed, various alerting checks are made. This includes:
+        
+        - Anything that has never been seen before in a scan
+        - Anything that has come up after being down for x amount of time / scans
+        - Anything (content) that has changed - relevant with scans on single things.
+
+    Which exposes an interesting point: we need to consider that there are two types of scans: single response and multi-response. As in, some scans will only have one asset (like on or off), whereas others will have multiple assets (like a list of content, or associated subdomains)
+
+    The database stores assets in the following table:
+
+    id:                   PRIMARY KEY
+    target:               TEXT NOT NULL
+    company:              TEXT NOT NULL
+    asset_type:           TEXT NOT NULL
+    asset_content:        TEXT NOT NULL
+    scan_completed:       DATE NOT NULL
+    scan_uuid             TEXT NOT NULL
+    ignore                INT NOT NULL
+
+
+Which means that we can get a list of all assets found in a single scan through the scan_id (or uuid, if we chose to implement that)
+
+
+================================================
+
+Assets: data stuff
+
+An asset is used for monitoring, for alerting and as input for other scans.
+
+The most important and difficult factor is getting the output data to work with other tools.
+
+Other tools have inputs such as the following:
+
+full_urls.txt   (aquatone)
+paths.txt       (gobuster)
+single asset    (uptime check)
+
+and the wordlists will sometimes have to be generated dynamically, too.
+
+Yeesh.
+
+So we've got the following different inputs:
+
+INPUT
+Single Asset
+List of assets (Symbol deliniated)
+Text file of assets - in different formats, as required.
+
+Note that there is added complexity involving the actual formatting of the asset. 
+
+WORDLIST
+can be a wordlist from our filesystem or a wordlist text file of loads of assets
+we'll have to generate the wordlist text file from assets from the database.
+
+
+And we have different kinds of outputs:
+
+True / False: in cases such as uptime checking
+URL: containing part or all of scheme://host:port/path?query
+Text: containing stuff like URLs and status codes.
+Number: in cases like checking for content length 
+Serialised Data: When we start performing vuln scans, we'll need information on the output of these. The serialised data can contain something like a base64 encoded HTTP request, or just a string. Not massively important for the time being, but worth being aware of.
+
+
+
+
+And when we run a scan, there is an output file generated that will have the required information, but not formatted right.
+
+So we'll have to regex out all of the assets, then stick them into the database with some kind of coherent formatting.
+
+URLs are the most common type of asset, so there need to be some in-built parsing methods.
+
+We need to really figure out all inputs to use. Like, are they just going to be IPs, domains and URLs? Or would I need to use some kind of content length as an input? 
+
+Important Question: Is there any tool that has an input that isn't some form of IP, domain or URL?
+No! 
+This makes life easier. We just need to add asset_out_format and asset_in_format to the items accordingly and it should 
+
+
+
+The table schema is as follows:
+
+
+    id:                   PRIMARY KEY
+    target:               TEXT NOT NULL
+    company:              TEXT NOT NULL
+    asset_type:           TEXT NOT NULL
+        # Used to get the correct input for another scan
+    asset_format:         TEXT NOT NULL
+        # scheme://host:port/path?query
+    asset_content:        TEXT NOT NULL
+    scan_completed:       DATE NOT NULL
+    scan_id               INTEGER NOT NULL
+    ignore                INT NOT NULL
+
+
+
+Target, company, scan completed and scan_id is pretty self explanatory.
+asset_type: 
+Different scans have different required input. For example, if an asset_type is 'discovered_subdomains' then it can be used by other tools that need subdomains as the input.
+To have another tool use the output of a specific asset_type, the asset_type needs to match the input_type in the tools.json file of the tool you want to use the asset of. This needs to be written better to be made clearer.
+
+
+
+
+
+
+

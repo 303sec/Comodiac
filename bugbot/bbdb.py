@@ -69,28 +69,24 @@ class bbdb:
     target              TEXT NOT NULL,
     company             TEXT NOT NULL,
     schedule_interval   TEXT NOT NULL,
-    # interval between scans in seconds
-    schedule_uuid    TEXT NOT NULL,
-    # Should be unique for this item
-    # As we'll want to have the ability to run different schedules with different tools,
-    # we need to use the schedule_uuid to view specific schedules.
-    tool               TEXT,
-    category           TEXT,
-    # Contains the tooling to use. 
+    schedule_uuid       TEXT NOT NULL,
+    tool                TEXT,
+    category            TEXT,
     active              INTEGER NOT NULL,
-    wordlist            TEXT,
     last_run            DATE,
     last_scan_id        INTEGER,
-    input              TEXT NOT NULL,
+    input               TEXT NOT NULL,
     intype              TEXT NOT NULL,
-    # can be set to either file or asset
-    # file = filename = input. asset = every line of file = input.
-    outfile             TEXT NOT NULL,
+    informat            TEXT NOT NULL,
+    output              TEXT NOT NULL,
+    outtype             TEXT NOT NULL,
+    outformat           TEXT NOT NULL,
+    outfile             TEXT
+    wordlist            TEXT,
+    wordlist_input      TEXT,
+    wordlist_intype     TEXT,
     parser              TEXT NOT NULL,
-    meta                TEXT
-
-
-
+    filesystem          TEXT
 
     """
     
@@ -119,7 +115,7 @@ class bbdb:
                 scan_completed DATE,
                 scan_pid TEXT,
                 scan_status TEXT NOT NULL
-                )''')
+            )''')
         except Exception as e:
             pass
         # Create the asset table
@@ -134,28 +130,35 @@ class bbdb:
                 scan_datetime DATE NOT NULL,
                 scan_id INTEGER NOT NULL,
                 ignore INTEGER NOT NULL
-                )''')
+            )''')
         except Exception as e:
             pass
 
         try:
             cursor.execute('''CREATE TABLE schedule_info (
-                id INTEGER PRIMARY KEY,
-                target TEXT NOT NULL,
-                company TEXT NOT NULL,
-                schedule_interval INT NOT NULL,
-                schedule_uuid TEXT NOT NULL,
-                input TEXT NOT NULL,
-                intype TEXT NOT NULL,
-                parser TEXT NOT NULL,
-                tool TEXT NOT NULL,
-                use_category INT NOT NULL,
-                wordlist TEXT,
-                last_run DATE,
-                last_scan_id INTEGER,
-                meta TEXT,
-                active INTEGER NOT NULL
-                )''')
+                id                  INTEGER PRIMARY KEY,
+                active              INTEGER NOT NULL,
+                target              TEXT NOT NULL,
+                company             TEXT NOT NULL,
+                schedule_interval   TEXT NOT NULL,
+                schedule_uuid       TEXT NOT NULL,
+                tool                TEXT,
+                last_run            DATE,
+                last_scan_id        INTEGER,
+                input               TEXT NOT NULL,
+                intype              TEXT NOT NULL,
+                informat            TEXT NOT NULL,
+                output              TEXT NOT NULL,
+                outtype             TEXT NOT NULL,
+                outformat           TEXT NOT NULL,
+                outfile             TEXT,
+                wordlist            TEXT,
+                wordlist_file       TEXT,
+                wordlist_input      TEXT,
+                wordlist_outformat  TEXT,
+                parser              TEXT NOT NULL,
+                filesystem          TEXT
+            )''')
         except Exception as e:
             pass
 
@@ -165,7 +168,7 @@ class bbdb:
                 target TEXT NOT NULL,
                 company TEXT NOT NULL,
                 target_dir TEXT NOT NULL
-                )''')
+            )''')
         except Exception as e:
             pass
 
@@ -370,47 +373,30 @@ class bbdb:
 
 
     '''
-        Creates table: schedule_info: containing info on information on scheduled scans
-        schedule_info table:
+schedule_info table:
 
-        id                  INTEGER PRIMARY KEY,
-        active              TEXT NOT NULL,
-        target              TEXT NOT NULL,
-        company             TEXT NOT NULL,
-        schedule            TEXT NOT NULL,
-        # schedule (cron style?)
-        tools               TEXT,
-        # Contains a comma delimited list of tools to use. 
-        categories          TEXT,
-        # Contains a comma delimited list of tools to use from given categories. 
-        wordlist            TEXT,
-        last_run            DATE,
-        last_scan_id        INTEGER,
-        input              TEXT NOT NULL,
-        intype              TEXT NOT NULL,
-        # can be set to either file or asset
-        # file = filename = input. asset = every line of file = input.
-        outfile             TEXT NOT NULL,
-        parser              TEXT NOT NULL,
-        meta                TEXT
-
-
-        id INTEGER PRIMARY KEY,
-        target TEXT NOT NULL,
-        company TEXT NOT NULL,
-        schedule_interval INT NOT NULL,
-        schedule_uuid TEXT NOT NULL,
-        input TEXT NOT NULL,
-        intype TEXT NOT NULL,
-        parser TEXT NOT NULL,
-        tool TEXT NOT NULL,
-        use_category INT NOT NULL,
-        wordlist TEXT,
-        last_run DATE,
-        last_scan_id INTEGER,
-        meta TEXT,
-        active INTEGER NOT NULL
-
+    id                  INTEGER PRIMARY KEY,
+    active              INTEGER NOT NULL,
+    target              TEXT NOT NULL,
+    company             TEXT NOT NULL,
+    schedule_interval   TEXT NOT NULL,
+    schedule_uuid       TEXT NOT NULL,
+    tool                TEXT,
+    last_run            DATE,
+    last_scan_id        INTEGER,
+    input               TEXT NOT NULL,
+    intype              TEXT NOT NULL,
+    informat            TEXT NOT NULL,
+    output              TEXT NOT NULL,
+    outtype             TEXT NOT NULL,
+    outformat           TEXT NOT NULL,
+    outfile             TEXT,
+    wordlist            TEXT,
+    wordlist_input      TEXT,
+    wordlist_outformat  TEXT,
+    parser              TEXT NOT NULL,
+    filesystem          TEXT
+    
     '''
 
 
@@ -421,14 +407,17 @@ class bbdb:
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
-            cursor.execute('INSERT INTO schedule_info (active, target, company, schedule_interval, \
-                tool, use_category, wordlist, input, intype, \
-                parser, meta, schedule_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
+            cursor.execute('INSERT INTO schedule_info (\
+                active, target, company, schedule_interval, schedule_uuid \
+                tool, input, intype, informat, \
+                output, outformat, outfile, \
+                wordlist, wordlist_file, wordlist_input, wordlist_outformat, \
+                parser, filesystem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
                 (schedule['active'], schedule['target'], schedule['company'], schedule['schedule_interval'], \
-                    schedule['tool'], schedule['use_category'], schedule['wordlist'], schedule['input'], \
-                    schedule['intype'], schedule['parser'], schedule['meta'], schedule['uuid']))
-            # There will definintely be errors... not everything has all these values.
-            # Could set them to blank on the way in?
+                    schedule['uuid'], schedule['tool'], schedule['input'], schedule['intype'], \
+                    schedule['informat'], schedule['output'], schedule['outtype'], schedule['outformat'],\
+                    schedule['outfile'], schedule['wordlist'], schedule['wordlist_file'], schedule['wordlist_input'], \
+                    schedule['wordlist_outformat'], schedule['parser'], schedule['filesystem']))
             connection.commit() 
             connection.close()
             return 0
