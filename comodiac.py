@@ -117,63 +117,20 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
     scope = scoping.scoping(company, verbose)
     scheduler = scheduling.scheduling(verbose)
 
-
-    # Need to check if the target exists. This would be easier if there was a database for the targets...
-    if not scope.does_target_exist(target):
-        click.echo('[-] Error: Target not found. Exiting.')
-        exit()
-        # add_target(verbose, company, target, None, None, None)
-
-
-    # @param: info: dict: A dictionary of relevant information about the schedule, including:
-    #
-    # schedule['active']: default = 1
-    # schedule['target']: required by CLI.
-    # schedule['company']: self.company
-    # schedule['schedule_interval']: default: 86400 (daily). Provided by CLI.
-    # schedule['tool']: name of the tool (or category, if use_category == 1) required by CLI. 
-    # schedule['use_category']: 1 if the scan is a category of tools (or just one). In the CLI, this can be used with --category
-
-    # schedule['wordlist']: default: the wordlist in tools.json
-    # schedule['infile']: if 'intype' == file, use this infile. From tools.json
-    # schedule['intype']: 'file' or 'target'. If file, use the supplied 'infile', which should be available in tools.json
-    # schedule['parser']: the parser regular expression to use on the output file. From tools.json
-    # schedule['meta']: any extra functions to perform post-scan. From tools.json
-
-
-    # This logic probably needs to be moved to scheduling.py at some point.
     if category:
         tool = category
         use_category = 1
     else:
         use_category = 0
 
-    with open('tools.json', 'r') as tools_file:
-        tool_found = False
-        tools = json.loads(tools_file.read())
-        for tool_name, tool_options in tools.items():
-            if tool_name == tool or tool_options['category'] == tool:
-                tool_found = True
-                if 'wordlist' in tool_options:
-                    wordlist = tool_options['wordlist']
-                else:
-                    wordlist = None
-                if tool_options['intype'] == 'file':
-                    schedule_input = tool_options['input']
-                else:
-                    schedule_input = target
-                intype = tool_options['intype']
-                parser = tool_options['parse_result']
-                meta = tool_options['meta']
-                schedule_uuid = str(uuid.uuid4())
 
-                schedule_interval
-                schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': schedule_interval, \
-                'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'input': schedule_input, 'intype':intype, \
-                'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
-                scheduler.add_schedule(schedule)
-    if tool_found == False:
-        click.echo('[-] Tool not found.')
+    # Need to check if the target exists. This would be easier if there was a database for the targets...
+    if not scope.does_target_exist(target):
+        click.echo('[-] Error: Target not found. Exiting.')
+        exit()
+    else:
+        scheduler.add_schedule(company, target, schedule_interval, tool, use_category, preset, alert)
+
 	
 
 @cli.command()

@@ -1,13 +1,20 @@
 To Do List - Micro
 
 - Fix the database functions for the new scheduling schema
+	- If I remember correctly, scheduling has now changed to take
 - Make sure there are no bugs from removing the ip_domain_url function (low importance, just bear it in mind)
+
+
 - Fix the add_schedule function, stuff was moved from comodiac.py to scheduling.py, and there are lots of things to work on there
-- Create the new run_tool function, without the use of tools.json as add_schedule parses everything into the database
+
+
+- Create the new run_tool function (now called prepare_tool), without the use of tools.json as add_schedule parses everything into the database
     - Dynamically generated stuff like wordlists
     - We need to make sure that the filesystem interactions make sense (generally)
+(
 - Figure out if work having a category scan (I think it is, but not high importance)
     - If after re-implementing run_command it is easy to do a category scan, go ahead.
+)
 - Create a full tools.json file, parser regexs and all!
 - When adding scope, add to the assets table with the type/category of 'scope'
 - Make sure asset table has the right schema for the new scheduling system

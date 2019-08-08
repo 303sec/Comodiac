@@ -25,7 +25,7 @@ class scoping:
         self.util = util()
         self.verbose = verbose
         self.company_name = company_name
-        if os.path.exists(os.path.expanduser('~') + '/bb') == False:
+        if not os.path.exists(os.path.expanduser('~') + '/bb'):
             self.util.verbose_print(self.verbose, '[+] Creating ~/bb directory')
             os.mkdir(os.path.expanduser('~') + '/bb')
         self.base_dir = os.path.expanduser('~') + '/bb'

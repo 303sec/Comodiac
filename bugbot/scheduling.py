@@ -43,43 +43,54 @@ class scheduling:
     # schedule['meta']: any extra functions to perform post-scan. From tools.json
     #
     # Main use is to parse stuff out of tools.json and add it to the schedule table.
-    def add_schedule(self, info:dict):
+
+    '''
+        id                  INTEGER PRIMARY KEY,
+        active              INTEGER NOT NULL,
+        target              TEXT NOT NULL,
+        company             TEXT NOT NULL,
+        schedule_interval   TEXT NOT NULL,
+        schedule_uuid       TEXT NOT NULL,
+        tool                TEXT,
+        last_run            DATE,
+        last_scan_id        INTEGER,
+        input               TEXT NOT NULL,
+        intype              TEXT NOT NULL,
+        informat            TEXT NOT NULL,
+        output              TEXT NOT NULL,
+        outtype             TEXT NOT NULL,
+        outformat           TEXT NOT NULL,
+        outfile             TEXT,
+        wordlist            TEXT,
+        wordlist_file       TEXT,
+        wordlist_input      TEXT,
+        wordlist_informat   TEXT,
+        parser              TEXT NOT NULL,
+        filesystem          TEXT
+    '''
+
+
+    def add_schedule(self, company, target, schedule_interval, tool, use_category, preset, alert):
 
         with open('tools.json', 'r') as tools_file:
             tool_found = False
             tools = json.loads(tools_file.read())
             for tool_name, tool_options in tools.items():
-                if tool_name == info['tool'] or tool_options['category'] == info['tool']:
-
-                    '''
-                        id                  INTEGER PRIMARY KEY,
-                        active              INTEGER NOT NULL,
-                        target              TEXT NOT NULL,
-                        company             TEXT NOT NULL,
-                        schedule_interval   TEXT NOT NULL,
-                        schedule_uuid       TEXT NOT NULL,
-                        tool                TEXT,
-                        last_run            DATE,
-                        last_scan_id        INTEGER,
-                        input               TEXT NOT NULL,
-                        intype              TEXT NOT NULL,
-                        informat            TEXT NOT NULL,
-                        output              TEXT NOT NULL,
-                        outtype             TEXT NOT NULL,
-                        outformat           TEXT NOT NULL,
-                        outfile             TEXT,
-                        wordlist            TEXT,
-                        wordlist_file       TEXT,
-                        wordlist_input      TEXT,
-                        wordlist_informat   TEXT,
-                        parser              TEXT NOT NULL,
-                        filesystem          TEXT
-                    '''
-
-
+                if tool_name == tool or tool_options['category'] == tool:
                     tool_found = True
+
+
+
+                    # Why do we even need to check?
+                    '''
                     if 'wordlist' in tool_options:
-                        wordlist = tool_options['wordlist']
+                        # If there is a wordlist, two possibilities exist: file or dynamic.
+                        if tool_option['wordlist']['type'] == 'file':
+                            wordlist = tool_options['wordlist']['file']
+                        else:
+                            wordlist = tool_options['wordlist']
+                            # we need to dynamically generate the wordlist at runtime.
+                    '''
                     else:
                         wordlist = None
                     if tool_options['intype'] == 'file':
@@ -90,8 +101,8 @@ class scheduling:
 
                     schedule['active'] = 1
                     
-                    schedule['target'] = info['target']
-                    schedule['company'] = info['company']
+                    schedule['target'] = target
+                    schedule['company'] = company
                     schedule['schedule_interval'] = info['schedule_interval']
                     schedule['uuid'] = str(uuid.uuid4())
                     schedule['tool'] = info['tool']
@@ -104,16 +115,18 @@ class scheduling:
                     schedule['output'] = tool_options['output']
                     schedule['parser'] = tool_options['parse_result']
                     schedule['meta'] = tool_options['meta']
+
+                    if 'wordlist' in tool_options:
+                        schedule['wordlist'] = tool_options['wordlist']
                     
-
-
-
                     schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': schedule_interval, \
                     'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'input': schedule_input, 'intype':intype, \
                     'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
                     scheduler.add_schedule(schedule)
+
         if tool_found == False:
             click.echo('[-] Tool not found.')
+            exit()
 
 
 
@@ -285,8 +298,11 @@ class scheduling:
 
     def prepare_tool(self, schedule_id):
         '''
-
+        - Opens the schedule via the schedule ID
+        - 
         '''
+        schedule = get_schedule_by_id(schedule_id)
+
 
 
 
