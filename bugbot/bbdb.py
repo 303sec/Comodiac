@@ -81,7 +81,6 @@ class bbdb:
     output              TEXT NOT NULL,
     outtype             TEXT NOT NULL,
     outformat           TEXT NOT NULL,
-    outfile             TEXT
     wordlist            TEXT,
     wordlist_input      TEXT,
     wordlist_intype     TEXT,
@@ -151,8 +150,7 @@ class bbdb:
                 output              TEXT NOT NULL,
                 outtype             TEXT NOT NULL,
                 outformat           TEXT NOT NULL,
-                outfile             TEXT,
-                wordlist            TEXT,
+                wordlist_type       TEXT,
                 wordlist_file       TEXT,
                 wordlist_input      TEXT,
                 wordlist_outformat  TEXT,
@@ -390,8 +388,7 @@ schedule_info table:
     output              TEXT NOT NULL,
     outtype             TEXT NOT NULL,
     outformat           TEXT NOT NULL,
-    outfile             TEXT,
-    wordlist            TEXT,
+    wordlist_type       TEXT,
     wordlist_input      TEXT,
     wordlist_outformat  TEXT,
     parser              TEXT NOT NULL,
@@ -408,15 +405,15 @@ schedule_info table:
         # Should add given information into the database.
         try:
             cursor.execute('INSERT INTO schedule_info (\
-                active, target, company, schedule_interval, schedule_uuid \
+                active, target, company, schedule_interval, schedule_uuid, \
                 tool, input, intype, informat, \
-                output, outformat, outfile, \
-                wordlist, wordlist_file, wordlist_input, wordlist_outformat, \
+                output, outformat, outtype, \
+                wordlist_type, wordlist_file, wordlist_input, wordlist_outformat, \
                 parser, filesystem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
                 (schedule['active'], schedule['target'], schedule['company'], schedule['schedule_interval'], \
                     schedule['uuid'], schedule['tool'], schedule['input'], schedule['intype'], \
-                    schedule['informat'], schedule['output'], schedule['outtype'], schedule['outformat'],\
-                    schedule['outfile'], schedule['wordlist'], schedule['wordlist_file'], schedule['wordlist_input'], \
+                    schedule['informat'], schedule['output'], schedule['outformat'], schedule['outtype'], \
+                    schedule['wordlist_type'], schedule['wordlist_file'], schedule['wordlist_input'], \
                     schedule['wordlist_outformat'], schedule['parser'], schedule['filesystem']))
             connection.commit() 
             connection.close()
@@ -460,7 +457,7 @@ schedule_info table:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT id, tool, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE company=?', \
+            cursor.execute('SELECT id, tool, target, schedule_interval, active, last_run FROM schedule_info WHERE company=?', \
                 (company, ))
             return [dict(row) for row in cursor.fetchall()]
 
@@ -473,7 +470,7 @@ schedule_info table:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT id, tool, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE target=?', \
+            cursor.execute('SELECT id, tool, target, schedule_interval, active, last_run FROM schedule_info WHERE target=?', \
                 (target, ))
             return [dict(row) for row in cursor.fetchall()]
 
@@ -486,7 +483,7 @@ schedule_info table:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT id, tool, target, schedule_interval, wordlist, active, last_run FROM schedule_info WHERE id=?', \
+            cursor.execute('SELECT id, tool, target, schedule_interval, active, last_run FROM schedule_info WHERE id=?', \
                 (schedule_id, ))
             return [dict(row) for row in cursor.fetchall()]
 

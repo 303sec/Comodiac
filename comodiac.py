@@ -1,7 +1,6 @@
 import click
 from bugbot import scheduling, scoping
 import json
-import uuid
 from terminaltables import AsciiTable
 
 # From stackoverflow - https://stackoverflow.com/questions/44247099/click-command-line-interfaces-make-options-required-if-other-optional-option-is

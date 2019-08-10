@@ -260,8 +260,8 @@ filesystem:     any custom filesystem interactions, using custom functions.
 wordlist(dict)  wordlist to use. Can be dynamically generated. Parameter overridden by Scheduler if wordlist is supplied.
     file        if file is supplied in the object, use this as the wordlist.
     input       generate a wordlist from this asset (for the current target) from the database.
-    intype      usually file, but can be single or list I guess(?)
-    informat    same as base informat: what elements of the url to use and parse into a temp file.
+    outtype      usually file, but can be single or list I guess(?)
+    outformat    same as base informat: what elements of the url to use and parse into a temp file.
 
 
 
