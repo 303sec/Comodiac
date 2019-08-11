@@ -51,9 +51,6 @@ class bbdb:
     # We need input format in the tools too, it seems.
     # Format types:
     # scheme://host:port/path?query
-    # (and all variations. Delimiter is -)
-
-
     asset_content:        TEXT NOT NULL
     scan_completed:       DATE NOT NULL
     scan_id               INTEGER NOT NULL
@@ -125,7 +122,7 @@ class bbdb:
                 company TEXT NOT NULL,
                 asset_type TEXT NOT NULL,
                 asset_content TEXT NOT NULL,
-                asset_category TEXT NOT NULL,
+                asset_format TEXT NOT NULL,
                 scan_datetime DATE NOT NULL,
                 scan_id INTEGER NOT NULL,
                 ignore INTEGER NOT NULL
@@ -141,7 +138,8 @@ class bbdb:
                 company             TEXT NOT NULL,
                 schedule_interval   TEXT NOT NULL,
                 schedule_uuid       TEXT NOT NULL,
-                tool                TEXT,
+                tool                TEXT NOT NULL,
+                use_category        INT NOT NULL,
                 last_run            DATE,
                 last_scan_id        INTEGER,
                 input               TEXT NOT NULL,
@@ -278,8 +276,8 @@ class bbdb:
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
-            cursor.executemany('INSERT INTO assets (target, company, asset_type, asset_content, asset_category, scan_datetime) VALUES (?, ?, ?, ?, ?, ?)',\
-                (asset_list))
+            cursor.executemany('INSERT INTO assets (target, company, asset_type, asset_content, asset_format, scan_datetime, scan_id) VALUES (?, ?, ?, ?, ?, ?, ?)',\
+                (asset_list, ))
             connection.commit() 
             connection.close()
             return 0
@@ -295,8 +293,8 @@ class bbdb:
         cursor= connection.cursor();
         # Should add given information into the database.
         try:
-            cursor.execute('INSERT INTO assets (target, company, asset_type, asset_content, asset_category, scan_datetime) VALUES (?, ?, ?, ?, ?, ?)',\
-                (asset))
+            cursor.execute('INSERT INTO assets (target, company, asset_type, asset_content, asset_format, scan_datetime, scan_id, ignore) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',\
+                (target, asset['company'], asset['asset_type'], target, asset['asset_format'], asset['scan_datetime'], asset['scan_id'], asset['ignore'], ))
             connection.commit() 
             connection.close()
             return 0
@@ -306,19 +304,6 @@ class bbdb:
             return -1
         return 0
 
-
-    def get_assets_by_category(self, company, target, asset_category):
-        connection = sqlite3.connect(self.db_name)
-        connection.row_factory = sqlite3.Row
-        cursor= connection.cursor();
-        try:
-            cursor.execute('SELECT * FROM assets WHERE asset_category=? AND target=? AND company=?', (asset_category, target, company))
-            result = cursor.fetchall()
-            return [dict(row) for row in cursor.fetchall()]
-
-        except Exception as e:
-            print(e)
-            return -1
 
     def get_assets_by_type(self, company, target, asset_type):
         connection = sqlite3.connect(self.db_name)
@@ -406,12 +391,12 @@ schedule_info table:
         try:
             cursor.execute('INSERT INTO schedule_info (\
                 active, target, company, schedule_interval, schedule_uuid, \
-                tool, input, intype, informat, \
+                tool, use_category, input, intype, informat, \
                 output, outformat, outtype, \
                 wordlist_type, wordlist_file, wordlist_input, wordlist_outformat, \
-                parser, filesystem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
+                parser, filesystem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
                 (schedule['active'], schedule['target'], schedule['company'], schedule['schedule_interval'], \
-                    schedule['uuid'], schedule['tool'], schedule['input'], schedule['intype'], \
+                    schedule['uuid'], schedule['tool'], schedule['use_category'], schedule['input'], schedule['intype'], \
                     schedule['informat'], schedule['output'], schedule['outformat'], schedule['outtype'], \
                     schedule['wordlist_type'], schedule['wordlist_file'], schedule['wordlist_input'], \
                     schedule['wordlist_outformat'], schedule['parser'], schedule['filesystem']))
@@ -457,7 +442,7 @@ schedule_info table:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT id, tool, target, schedule_interval, active, last_run FROM schedule_info WHERE company=?', \
+            cursor.execute('SELECT * FROM schedule_info WHERE company=?', \
                 (company, ))
             return [dict(row) for row in cursor.fetchall()]
 
@@ -470,7 +455,7 @@ schedule_info table:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT id, tool, target, schedule_interval, active, last_run FROM schedule_info WHERE target=?', \
+            cursor.execute('SELECT * FROM schedule_info WHERE target=?', \
                 (target, ))
             return [dict(row) for row in cursor.fetchall()]
 
@@ -483,7 +468,7 @@ schedule_info table:
         connection.row_factory = sqlite3.Row
         cursor= connection.cursor();
         try:
-            cursor.execute('SELECT id, tool, target, schedule_interval, active, last_run FROM schedule_info WHERE id=?', \
+            cursor.execute('SELECT * FROM schedule_info WHERE schedule_uuid=?', \
                 (schedule_id, ))
             return [dict(row) for row in cursor.fetchall()]
 

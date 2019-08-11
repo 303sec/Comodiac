@@ -88,6 +88,9 @@ class scoping:
         self.util.verbose_print(self.verbose, '[+] Creating directory', target_dir)
         self.util.verbose_print(self.verbose, '[+] Creating directory', target_notes_dir)
         self.db.add_target(self.company_name, target, target_dir)
+        # target, company, asset_type, asset_content, asset_format, scan_datetime
+        asset_dict = {'asset_content': target, 'company': self.company_name, 'asset_type': 'scope', 'asset_format': 'host', 'scan_datetime': self.util.timestamp(), 'scan_id': 0, 'ignore': 0}
+        self.db.add_asset(target, asset_dict)
         self.util.verbose_print(self.verbose, '[+] Adding entry for', target ,'to database')
 
         # It's bad just excepting. Gotta get the right exception type to make this useful!

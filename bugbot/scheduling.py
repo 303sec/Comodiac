@@ -80,7 +80,7 @@ class scheduling:
     # @param: use_category: bool: if True, use category. If not, tool.
     # @param: preset: string: default = None, not yet implemented
     # @param: alert: string: default = None, not yet implemented
-    def add_schedule(self, company, target, schedule_interval, tool, use_category=False, preset=None, alert=None):
+    def add_schedule(self, company, target, schedule_interval, tool, use_category=0, preset=None, alert=None):
         # Need to create a tool integrity check at some point.
         with open('tools.json', 'r') as tools_file:
             tool_found = False
@@ -120,6 +120,7 @@ class scheduling:
                     schedule['schedule_interval'] = schedule_interval
                     schedule['uuid'] = str(uuid.uuid4())
                     schedule['tool'] = tool
+                    schedule['use_category'] = use_category
 
                     # Grabbed from tools.json
                     schedule['intype'] = tool_options['intype']
@@ -211,17 +212,13 @@ class scheduling:
                 # If the differnce between the last scan and now is greater than the interval, run it! 
                 # if use_categories == 1, then the tool item contains the category name.
                 # The db only contains 1 tool or category per run now, not a comma delimited list.
-                if schedule['wordlist'] != None:
-                    wordlist = 'default'
-                else:
-                    wordlist = schedule['wordlist']
 
                 if schedule['use_category'] == 0:            
-                    self.prepare_tool(schedule['tool'], schedule['company'], schedule['target'], wordlist)
+                    self.prepare_tool(schedule['schedule_uuid'])
                 elif schedule['use_category'] == 1:
                     # Not yet implemented.
                     exit()
-                    #self.run_tools_by_category(schedule['tool'],  schedule['company'], schedule['target'], wordlist)
+                    #self.prepare_category(schedule['schedule_uuid'])
                 else:
                     self.util.verbose_print('this should not ever happen.')
         return 0
@@ -315,13 +312,39 @@ class scheduling:
         return 0
 
 
-    def prepare_tool(self, schedule_id):
+    def prepare_tool(self, schedule_uuid):
         '''
-        - Opens the schedule via the schedule ID
-        - 
+        - Dynamic generation of command:
+            a. get schedule data from database via schedule ID
+            b. look at input: get all data on input from database
+            NOTE: Data needs to be processed here for various things such as:
+                - Unique values only
+                - 
+            c. look at intype: different execution for 3 different types of intype.
+                single: loop through assets and perform below functions on all of them
+                list:   put all database assets into a list format and 
+                file:   generate a file with all targets appropriately formatted and use this as the TARGET
+            d. if wordlist, check if there is a 'file' in the tool or given through CLI
+                otherwise, dynamically generate the wordlist file
+            e. run scan
+            f. parse results into database
         '''
-        schedule = get_schedule_by_id(schedule_id)
+        schedule = self.db.get_schedule_by_id(schedule_uuid)[0]
+        print(schedule)
+        input_assets = self.db.get_assets_by_type(schedule['company'], schedule['target'], schedule['input'])
+        print(input_assets)
 
+        # Continue from here!
+        '''
+        if schedule['intype'] == 'single':
+            #
+        elif schedule['intype'] == 'list':
+            #
+        elif schedule['intype'] == 'file':
+            #
+        else:
+            print('[-] Invalid intype. Something went very wrong!')
+        '''
 
 
 
