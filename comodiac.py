@@ -123,7 +123,6 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
     else:
         use_category = 0
 
-
     # Need to check if the target exists. This would be easier if there was a database for the targets...
     if not scope.does_target_exist(target):
         click.echo('[-] Error: Target not found. Exiting.')

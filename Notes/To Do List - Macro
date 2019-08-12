@@ -226,7 +226,9 @@ Using the following template:
         "parse_result": "^Host: ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})",
         "filesystem" : ""
         "wordlist": {
+            "type": "file"
             "file": "/usr/share/wordlists/SecLists/Notrelevantforthis",
+            # Don't include a file if not needed!
             "input": "",
             "informat": "host"
             "intype": "file"
