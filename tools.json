@@ -1,5 +1,6 @@
 {
 	"domain_ip_monitor": {
+		"category": "uptime_monitoring",
         "command": "nmap -sP TARGET -oG OUTPUT",
         "intype": "single",
         "input": "discovered_hosts",
@@ -8,10 +9,11 @@
         "output": "discovered_ips",
         "outformat": "host",
         "outfile": "",
-        "parse_result": "^Host: ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})",
+        "parse_result": "^Host: ([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})",
         "filesystem" : ""
         },
 	"amass": {
+		"category": "subdomain_enumeration",
 		"command": "amass -active -brute -ip -src -d TARGET -oA OUTPUT -w WORDLIST",
 		"input": "scope",
 		"intype": "single",
@@ -20,14 +22,16 @@
         "outtype": "multi",
         "output": "discovered_hosts",
         "outformat": "host",
-        "parse_result": "^\[[A-Za-z .]+\]\s+([\-A-Za-z1-9.]+)",
+        "parse_result": "^\\[[A-Za-z .]+\\]\\s+([\\-A-Za-z1-9.]+)",
         "filesystem" : "",
 		"wordlist": {
+			"type": "file",
 			"file": "/usr/share/wordlists/all.txt"
 			}
 		},
 
 	"massdns": {
+		"category": "uptime_monitoring",
 		"note": "Command not yet working",
 		"command": "python ~/tools/subbrute/subbrute.py WORDLIST TARGET  | massdns -r /root/tools/massdns/ -t A -o -w OUTPUT",
 		"infile": "scope/wildcard_domains.txt",
@@ -37,6 +41,7 @@
 		"type": "domain"
 		},
 	"amass_passive": {
+		"category": "OSINT",
 		"command": "amass -passive -ip -src -df TARGET -oA OUTPUT",
 		"infile": "scope/wildcard_domains.txt",
 		"intype": "target",

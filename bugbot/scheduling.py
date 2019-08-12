@@ -16,6 +16,8 @@ import shlex
 import threading
 import math
 from .util import *
+import uuid
+
 
 
 class scheduling:
@@ -26,23 +28,7 @@ class scheduling:
         self.db = bbdb(self.base_dir)
         return
 
-    # @param: info: dict: A dictionary of relevant information about the schedule, including:
-    #
-    # schedule['active']: default = 1
-    # schedule['target']: required by CLI.
-    # schedule['company']: self.company
-    # schedule['schedule_interval']: default: 86400 (daily). Provided by CLI.
-    # schedule['tool']: name of the tool (or category, if use_category == 1) required by CLI. 
-    # schedule['use_category']: 1 if the scan is a category of tools (or just one). In the CLI, this can be used with --category
 
-    # schedule['wordlist']: default: the wordlist in tools.json
-    # schedule['input']: if 'intype' == file, use this input. From tools.json
-    # schedule['intype']: 'file' or 'target'. If file, use the supplied 'input', which should be available in tools.json
-    # schedule['outfile']: output file for the tool. Does this need to be here? This has confused me! ????!!!???? 
-    # schedule['parser']: the parser regular expression to use on the output file. From tools.json
-    # schedule['meta']: any extra functions to perform post-scan. From tools.json
-    #
-    # Main use is to parse stuff out of tools.json and add it to the schedule table.
 
     '''
         id                  INTEGER PRIMARY KEY,
@@ -60,53 +46,83 @@ class scheduling:
         output              TEXT NOT NULL,
         outtype             TEXT NOT NULL,
         outformat           TEXT NOT NULL,
-        outfile             TEXT,
         wordlist            TEXT,
         wordlist_file       TEXT,
         wordlist_input      TEXT,
-        wordlist_informat   TEXT,
+        wordlist_outformat   TEXT,
         parser              TEXT NOT NULL,
         filesystem          TEXT
     '''
 
+    # @param: info: dict: A dictionary of relevant information about the schedule, including:
+    #
+    # schedule['active']: default = 1
+    # schedule['target']: required by CLI.
+    # schedule['company']: self.company
+    # schedule['schedule_interval']: default: 86400 (daily). Provided by CLI.
+    # schedule['tool']: name of the tool (or category, if use_category == 1) required by CLI. 
+    # schedule['use_category']: 1 if the scan is a category of tools (or just one). In the CLI, this can be used with --category
 
-    def add_schedule(self, company, target, schedule_interval, tool, use_category, preset, alert):
+    # schedule['wordlist']: default: the wordlist in tools.json
+    # schedule['input']: if 'intype' == file, use this input. From tools.json
+    # schedule['intype']: 'file' or 'target'. If file, use the supplied 'input', which should be available in tools.json
+    # schedule['parser']: the parser regular expression to use on the output file. From tools.json
+    # schedule['meta']: any extra functions to perform post-scan. From tools.json
+    #
+    # Main use is to parse stuff out of tools.json and add it to the schedule table.
 
+
+    # add_schedule: gets information from tools.json and CLI and parses them into db.
+    # @param: company: string: The name of the company to run the scan against
+    # @param: target: string: The target to schedule a tool to use
+    # @param: schedule_interval: string: the interval between each scan, as string
+    # @param: tool: string: the name of the tool (or category) to use
+    # @param: use_category: bool: if True, use category. If not, tool.
+    # @param: preset: string: default = None, not yet implemented
+    # @param: alert: string: default = None, not yet implemented
+    def add_schedule(self, company, target, schedule_interval, tool, use_category=0, preset=None, alert=None):
+        # Need to create a tool integrity check at some point.
         with open('tools.json', 'r') as tools_file:
             tool_found = False
             tools = json.loads(tools_file.read())
+            schedule = {}
             for tool_name, tool_options in tools.items():
                 if tool_name == tool or tool_options['category'] == tool:
                     tool_found = True
 
 
-
-                    # Why do we even need to check?
-                    '''
                     if 'wordlist' in tool_options:
-                        # If there is a wordlist, two possibilities exist: file or dynamic.
-                        if tool_option['wordlist']['type'] == 'file':
-                            wordlist = tool_options['wordlist']['file']
+                        schedule['wordlist_type'] = tool_options['wordlist']['type']
+                        # If there is a wordlist, two possibilities exist: file or db.
+                        # db = from database = dynamic. file = from static file.
+                        if tool_options['wordlist']['type'] == 'file':
+                            schedule['wordlist_file'] = tool_options['wordlist']['file']
+                            schedule['wordlist_input'] = None
+                            schedule['wordlist_outformat'] = None
                         else:
-                            wordlist = tool_options['wordlist']
+                            schedule['wordlist_file'] = None
+                            schedule['wordlist_input'] = tool_options['wordlist']['input']
+                            schedule['wordlist_outformat'] = tool_options['wordlist']['outformat']
                             # we need to dynamically generate the wordlist at runtime.
-                    '''
                     else:
-                        wordlist = None
-                    if tool_options['intype'] == 'file':
-                        schedule_input = tool_options['input']
-                    else:
-                        schedule_input = target
+                        schedule['wordlist_type'] = None
+                        schedule['wordlist_file'] = None
+                        schedule['wordlist_input'] = None
+                        schedule['wordlist_outformat'] = None
 
 
+                    # 
                     schedule['active'] = 1
                     
+                    # Grabbed from CLI
                     schedule['target'] = target
                     schedule['company'] = company
-                    schedule['schedule_interval'] = info['schedule_interval']
+                    schedule['schedule_interval'] = schedule_interval
                     schedule['uuid'] = str(uuid.uuid4())
-                    schedule['tool'] = info['tool']
+                    schedule['tool'] = tool
+                    schedule['use_category'] = use_category
 
+                    # Grabbed from tools.json
                     schedule['intype'] = tool_options['intype']
                     schedule['informat'] = tool_options['informat']
                     schedule['input'] = tool_options['input']
@@ -114,24 +130,23 @@ class scheduling:
                     schedule['outformat'] = tool_options['outformat']
                     schedule['output'] = tool_options['output']
                     schedule['parser'] = tool_options['parse_result']
-                    schedule['meta'] = tool_options['meta']
+                    if tool_options['filesystem']:
+                        schedule['filesystem'] = tool_options['filesystem']
+                    else:
+                        schedule['filesystem'] = None
 
-                    if 'wordlist' in tool_options:
-                        schedule['wordlist'] = tool_options['wordlist']
                     
-                    schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': schedule_interval, \
-                    'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'input': schedule_input, 'intype':intype, \
-                    'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
-                    scheduler.add_schedule(schedule)
+                    #schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': schedule_interval, \
+                    #'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'input': schedule_input, 'intype':intype, \
+                    #'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
+                    
+                    #self.db.add_schedule(schedule)
 
         if tool_found == False:
             click.echo('[-] Tool not found.')
             exit()
-
-
-
         self.util.verbose_print('[+] Adding schedule to database')
-        self.db.add_schedule(info)
+        self.db.add_schedule(schedule)
         return 0
 
     def get_schedule(self, company, target=None, schedule_id=None, all=None):
@@ -148,6 +163,7 @@ class scheduling:
 
         if results:
             # Get the header array
+            print(results)
             for key, item in results[0].items():
                 parsed_table_headers.append(key)
 
@@ -175,6 +191,8 @@ class scheduling:
                 return
 
 
+    # The heartbeat function is called on a cron job. 
+    # Gets all schedules and checks if they were run at a time later than their scheduled amount of time ago.
     def heartbeat(self):
         all_schedules = self.db.get_active_schedules()
         print('all_active_schedules:', all_schedules)
@@ -194,15 +212,13 @@ class scheduling:
                 # If the differnce between the last scan and now is greater than the interval, run it! 
                 # if use_categories == 1, then the tool item contains the category name.
                 # The db only contains 1 tool or category per run now, not a comma delimited list.
-                if schedule['wordlist'] != None:
-                    wordlist = 'default'
-                else:
-                    wordlist = schedule['wordlist']
 
                 if schedule['use_category'] == 0:            
-                    self.prepare_tool(schedule['tool'], schedule['company'], schedule['target'], wordlist)
+                    self.prepare_tool(schedule['schedule_uuid'])
                 elif schedule['use_category'] == 1:
-                    self.run_tools_by_category(schedule['tool'],  schedule['company'], schedule['target'], wordlist)
+                    # Not yet implemented.
+                    exit()
+                    #self.prepare_category(schedule['schedule_uuid'])
                 else:
                     self.util.verbose_print('this should not ever happen.')
         return 0
@@ -265,7 +281,7 @@ class scheduling:
             tools = json.loads(tools_file.read())
             for tool, tool_options in tools.items():
                 if tool_name == tool:
-                    output_dir = self.base_dir + '/' + company + '/targets/' target + '/' + tool_options['category'] + '/' + tool + '/' + str(datetime.today().strftime('%d%m%Y'))
+                    output_dir = self.base_dir + '/' + company + '/targets/' + target + '/' + tool_options['category'] + '/' + tool + '/' + str(datetime.today().strftime('%d%m%Y'))
                     try:
                         os.makedirs(output_dir)
                         self.util.verbose_print('[+] Creating directory', output_dir, '.')
@@ -296,13 +312,39 @@ class scheduling:
         return 0
 
 
-    def prepare_tool(self, schedule_id):
+    def prepare_tool(self, schedule_uuid):
         '''
-        - Opens the schedule via the schedule ID
-        - 
+        - Dynamic generation of command:
+            a. get schedule data from database via schedule ID
+            b. look at input: get all data on input from database
+            NOTE: Data needs to be processed here for various things such as:
+                - Unique values only
+                - 
+            c. look at intype: different execution for 3 different types of intype.
+                single: loop through assets and perform below functions on all of them
+                list:   put all database assets into a list format and 
+                file:   generate a file with all targets appropriately formatted and use this as the TARGET
+            d. if wordlist, check if there is a 'file' in the tool or given through CLI
+                otherwise, dynamically generate the wordlist file
+            e. run scan
+            f. parse results into database
         '''
-        schedule = get_schedule_by_id(schedule_id)
+        schedule = self.db.get_schedule_by_id(schedule_uuid)[0]
+        print(schedule)
+        input_assets = self.db.get_assets_by_type(schedule['company'], schedule['target'], schedule['input'])
+        print(input_assets)
 
+        # Continue from here!
+        '''
+        if schedule['intype'] == 'single':
+            #
+        elif schedule['intype'] == 'list':
+            #
+        elif schedule['intype'] == 'file':
+            #
+        else:
+            print('[-] Invalid intype. Something went very wrong!')
+        '''
 
 
 
