@@ -29,49 +29,6 @@ class scheduling:
         return
 
 
-
-    '''
-        id                  INTEGER PRIMARY KEY,
-        active              INTEGER NOT NULL,
-        target              TEXT NOT NULL,
-        company             TEXT NOT NULL,
-        schedule_interval   TEXT NOT NULL,
-        schedule_uuid       TEXT NOT NULL,
-        tool                TEXT,
-        last_run            DATE,
-        last_scan_id        INTEGER,
-        input               TEXT NOT NULL,
-        intype              TEXT NOT NULL,
-        informat            TEXT NOT NULL,
-        output              TEXT NOT NULL,
-        outtype             TEXT NOT NULL,
-        outformat           TEXT NOT NULL,
-        wordlist            TEXT,
-        wordlist_file       TEXT,
-        wordlist_input      TEXT,
-        wordlist_outformat   TEXT,
-        parser              TEXT NOT NULL,
-        filesystem          TEXT
-    '''
-
-    # @param: info: dict: A dictionary of relevant information about the schedule, including:
-    #
-    # schedule['active']: default = 1
-    # schedule['target']: required by CLI.
-    # schedule['company']: self.company
-    # schedule['schedule_interval']: default: 86400 (daily). Provided by CLI.
-    # schedule['tool']: name of the tool (or category, if use_category == 1) required by CLI. 
-    # schedule['use_category']: 1 if the scan is a category of tools (or just one). In the CLI, this can be used with --category
-
-    # schedule['wordlist']: default: the wordlist in tools.json
-    # schedule['input']: if 'intype' == file, use this input. From tools.json
-    # schedule['intype']: 'file' or 'target'. If file, use the supplied 'input', which should be available in tools.json
-    # schedule['parser']: the parser regular expression to use on the output file. From tools.json
-    # schedule['meta']: any extra functions to perform post-scan. From tools.json
-    #
-    # Main use is to parse stuff out of tools.json and add it to the schedule table.
-
-
     # add_schedule: gets information from tools.json and CLI and parses them into db.
     # @param: company: string: The name of the company to run the scan against
     # @param: target: string: The target to schedule a tool to use
@@ -110,8 +67,6 @@ class scheduling:
                         schedule['wordlist_input'] = None
                         schedule['wordlist_outformat'] = None
 
-
-                    # 
                     schedule['active'] = 1
                     
                     # Grabbed from CLI
@@ -135,19 +90,13 @@ class scheduling:
                     else:
                         schedule['filesystem'] = None
 
-                    
-                    #schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': schedule_interval, \
-                    #'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'input': schedule_input, 'intype':intype, \
-                    #'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
-                    
-                    #self.db.add_schedule(schedule)
-
         if tool_found == False:
             click.echo('[-] Tool not found.')
             exit()
         self.util.verbose_print('[+] Adding schedule to database')
         self.db.add_schedule(schedule)
         return 0
+
 
     def get_schedule(self, company, target=None, schedule_id=None, all=None):
         if target is None and schedule_id is None:
@@ -227,14 +176,6 @@ class scheduling:
 
 
 
-
-
-
-
-
-
-
-    # Not sure running by category is too important. 
 
 
     # @param: category: string: categroy of the scan, to be parsed from tools.json
@@ -330,11 +271,14 @@ class scheduling:
             f. parse results into database
         '''
         schedule = self.db.get_schedule_by_id(schedule_uuid)[0]
-        print(schedule)
+        print('schedule', schedule)
         input_assets = self.db.get_assets_by_type(schedule['company'], schedule['target'], schedule['input'])
-        print(input_assets)
+        print('input_assets', input_assets)
 
-        # Continue from here!
+        # schedule example: {'id': 1, 'active': 1, 'target': 'test', 'company': 'google.com', 'schedule_interval': 'daily', 'schedule_uuid': 'e98c96d2-d9be-453f-baca-f524056a4fad', 'tool': 'amass', 'use_category': 0, 'last_run': None, 'last_scan_id': None, 'input': 'scope', 'intype': 'single', 'informat': 'host', 'output': 'discovered_hosts', 'outtype': 'multi', 'outformat': 'host', 'wordlist_type': 'file', 'wordlist_file': '/usr/share/wordlists/all.txt', 'wordlist_input': None, 'wordlist_outformat': None, 'parser': '^\\[[A-Za-z .]+\\]\\s+([\\-A-Za-z1-9.]+)', 'filesystem': None}
+        # input_assets example: [{'id': 1, 'target': 'test', 'company': 'google.com', 'asset_type': 'scope', 'asset_content': 'test', 'asset_format': 'host', 'scan_datetime': 1565626695, 'scan_id': 0, 'ignore': 0}]
+
+
         '''
         if schedule['intype'] == 'single':
             #
@@ -346,29 +290,73 @@ class scheduling:
             print('[-] Invalid intype. Something went very wrong!')
         '''
 
+        # First, create a basic template for running scans.
+        # Then we can make it work for different intypes.
+
+        # Step 1 - create the directory for the scan(s)
+        output_dir = self.base_dir + '/' + schedule['company'] + '/targets/' + schedule['target'] + '/' + schedule['category'] + '/' + schedule['tool'] + '/' + str(datetime.today().strftime('%d%m%Y'))
+        try:
+            os.makedirs(output_dir)
+            self.util.verbose_print('[+] Creating directory', output_dir, '.')
+        except OSError:
+            self.util.verbose_print('[+] Directory', output_dir, 'found.')
+            pass
+
+        # step 2: Perform required wordlist functions
+        if 'WORDLIST' in schedule['command']:
+            # Check to see if there are wordlists in tools.json
+            pass
+
+
+        # final step: send it to threaded process
+        threading.Thread(target=self.run_thread_cmd, args=(company, target, command, outfile)).start()
+
+
+
+        # Grabbed from run_tool()
+        if tool_name == tool:
+
+            output_file = output_dir + '/' + tool + '.' + str(self.util.timestamp())
+            # Check that the tool actually uses a wordlist
+            if 'WORDLIST' in tool_options['command']:
+                # If no wordlist supplied, use the wordlist given as a param
+                if wordlist == 'default':
+                    wordlist = tool_options['wordlist']
+            else:
+                wordlist = ''
+            # Replaces the placeholders in the scan.
+            command = tool_options['command'].replace('INPUT', target).replace('OUTPUT', output_file).replace('WORDLIST', wordlist)
+            # This should really popen another command, not call exec(). For the time being though (and testing) it stays.
+            scan_id = target.strip() + tool + str(self.util.timestamp())
+            scan_data = {'category': tool_options['category'], 'tool': tool, 'command': command, 'output': output_file, 'scan_id': scan_id, 'status': 'waiting'}
+            # Add the scan to db (before the threading stuff comes into play)
+            self.util.verbose_print('[+] Adding scan to database.')
+            self.db.add_scan(company, target, scan_data)
+            # This should launch the command into a different thread!
+            self.util.verbose_print('[+] Starting new thread for scan.')
+            #self.run_cmd(target, scan_data)
+            # Python3's way of threading
+            threading.Thread(target=self.run_thread_cmd, args=(company, target, scan_data)).start()
+
 
 
     # Never accessed directly - run through threading.thread in run_tool*
     # @param: target: string: target name
     # @param: scan: dict: 
-    def run_thread_cmd(self, company, target, scan:dict):
-        # This command will essentially be run as it's own process via threading
-        # Need a scan dict containing:
-        # scan['id'] = target, scan name & timestamp concatenated
-        # scan['tool']
-        # scan['command']
-        # scan['started']
-        # scan['pid'] - Later 
-        # scan['status'] 
+    def run_thread_cmd(self, company, target, command, outfile):
+        # This command will essentially be run as it's own process via threading.
+
+        scan = {'command': command, 'output': outfile}
 
         company_dir = self.base_dir + '/' + company
         
-        process = subprocess.Popen(shlex.split(scan['command']), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(shlex.split(command), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Below could be used later for printing output to web interface.
         scan['pid'] = process.pid
         scan['status'] = 'started'
         scan['started'] = self.util.timestamp()
+        # UPDATE scan_info SET scan_pid=?, scan_started=?, scan_status=?, scan_outfile=? WHERE scan_id=? AND target=? AND company=?
         self.db.start_scan(company, target, scan)
         # blocks processing until command is complete
         stdout, stderr = process.communicate()
@@ -377,9 +365,11 @@ class scheduling:
         if process.returncode != 0:
             scan['status'] = 'error'
             scan['completed'] = ''
+            scan['pid'] = ''
         else:
             scan['status'] = 'completed'
             scan['completed'] = self.util.timestamp()
+            scan['pid'] = ''
 
         self.db.scan_complete(company, target, scan)
 
