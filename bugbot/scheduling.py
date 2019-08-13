@@ -305,6 +305,11 @@ class scheduling:
         # step 2: Perform required wordlist functions
         if 'WORDLIST' in schedule['command']:
             # Check to see if there are wordlists in tools.json
+            # Check if the wordlist is a file or dynamic
+            # If dynamic, generate the wordlist in the /tmp directory
+            # (create the tmp dir in ~/bb)
+
+            # 
             pass
 
 
@@ -338,6 +343,20 @@ class scheduling:
             # Python3's way of threading
             threading.Thread(target=self.run_thread_cmd, args=(company, target, scan_data)).start()
 
+
+    # @create_tmp_file: creates a temporary file for dynamically generated wordlists etc.
+    # @param: item_list: list: a list of items that are added to the file, separated by newlines.
+    # @return: tmp_file_path: the path of the generated file.
+    def create_tmp_file(self, item_list):
+        tmp_dir = self.base_dir + '/tmp'
+        if not os.path.exists(tmp_dir):
+            os.makedirs(tmp_dir)
+        tmp_uuid = str(uuid.uuid4())
+        tmp_file_path = tmp_dir + '/' + tmp_uuid
+        with open(tmp_file_path, 'w') as f:
+            for item in item_list:
+                f.write("%s\n" % item)
+        return tmp_file_path
 
 
     # Never accessed directly - run through threading.thread in run_tool*
