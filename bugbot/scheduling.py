@@ -72,6 +72,7 @@ class scheduling:
                     # Grabbed from CLI
                     schedule['target'] = target
                     schedule['company'] = company
+                    schedule['category'] = tool_options['category']
                     schedule['schedule_interval'] = schedule_interval
                     schedule['uuid'] = str(uuid.uuid4())
                     schedule['tool'] = tool
@@ -172,12 +173,6 @@ class scheduling:
                     self.util.verbose_print('this should not ever happen.')
         return 0
 
-
-
-
-
-
-
     # @param: category: string: categroy of the scan, to be parsed from tools.json
     # @param: target: string: the name of the target
     # @param: wordlist: string: default='default': path to a wordlist, if applicable.
@@ -275,20 +270,11 @@ class scheduling:
         input_assets = self.db.get_assets_by_type(schedule['company'], schedule['target'], schedule['input'])
         print('input_assets', input_assets)
 
+        command = schedule['command']
+
         # schedule example: {'id': 1, 'active': 1, 'target': 'test', 'company': 'google.com', 'schedule_interval': 'daily', 'schedule_uuid': 'e98c96d2-d9be-453f-baca-f524056a4fad', 'tool': 'amass', 'use_category': 0, 'last_run': None, 'last_scan_id': None, 'input': 'scope', 'intype': 'single', 'informat': 'host', 'output': 'discovered_hosts', 'outtype': 'multi', 'outformat': 'host', 'wordlist_type': 'file', 'wordlist_file': '/usr/share/wordlists/all.txt', 'wordlist_input': None, 'wordlist_outformat': None, 'parser': '^\\[[A-Za-z .]+\\]\\s+([\\-A-Za-z1-9.]+)', 'filesystem': None}
         # input_assets example: [{'id': 1, 'target': 'test', 'company': 'google.com', 'asset_type': 'scope', 'asset_content': 'test', 'asset_format': 'host', 'scan_datetime': 1565626695, 'scan_id': 0, 'ignore': 0}]
 
-
-        '''
-        if schedule['intype'] == 'single':
-            #
-        elif schedule['intype'] == 'list':
-            #
-        elif schedule['intype'] == 'file':
-            #
-        else:
-            print('[-] Invalid intype. Something went very wrong!')
-        '''
 
         # First, create a basic template for running scans.
         # Then we can make it work for different intypes.
@@ -302,15 +288,31 @@ class scheduling:
             self.util.verbose_print('[+] Directory', output_dir, 'found.')
             pass
 
-        # step 2: Perform required wordlist functions
+        # step 2: Generate or use the wordlist, and sub it in the command 
         if 'WORDLIST' in schedule['command']:
+            if schedule['wordlist_type'] == 'asset':
+                # Dynamically generated
+                wordlist_input_assets = self.db.get_assets_by_type(schedule['wordlist_input'])
+                wordlist_input_asset_list = [asset.get('asset_content') for asset in wordlist_input_assets]
+                # Here we need to format the wordlist assets appropriately.
+                # For this we need to make the function format_parser in utils to be created.
+                tmp_dir = self.base_dir + '/tmp'
+                tmp_file = self.util.create_tmp_file(wordlist_input_asset_list, tmp_dir)
+                wordlist = tmp_file
+                command = command.replace('WORDLIST', wordlist)
+
+            elif schedule['wordlist_type'] == 'file':
+                wordlist = schedule['wordlist_file']
+                command = command.replace('WORDLIST', wordlist)
+            else:
+                print('error!')
             # Check to see if there are wordlists in tools.json
             # Check if the wordlist is a file or dynamic
+            # Check in informat of the wordlist and match it with the format of the input
             # If dynamic, generate the wordlist in the /tmp directory
             # (create the tmp dir in ~/bb)
 
-            # 
-            pass
+        # step 3: 
 
 
         # final step: send it to threaded process
@@ -344,19 +346,7 @@ class scheduling:
             threading.Thread(target=self.run_thread_cmd, args=(company, target, scan_data)).start()
 
 
-    # @create_tmp_file: creates a temporary file for dynamically generated wordlists etc.
-    # @param: item_list: list: a list of items that are added to the file, separated by newlines.
-    # @return: tmp_file_path: the path of the generated file.
-    def create_tmp_file(self, item_list):
-        tmp_dir = self.base_dir + '/tmp'
-        if not os.path.exists(tmp_dir):
-            os.makedirs(tmp_dir)
-        tmp_uuid = str(uuid.uuid4())
-        tmp_file_path = tmp_dir + '/' + tmp_uuid
-        with open(tmp_file_path, 'w') as f:
-            for item in item_list:
-                f.write("%s\n" % item)
-        return tmp_file_path
+
 
 
     # Never accessed directly - run through threading.thread in run_tool*

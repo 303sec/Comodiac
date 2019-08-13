@@ -59,6 +59,11 @@ class util:
         return parsed_interval
 
 
+
+
+
+
+
     # Need to finish this function. Should marry up input format and output format.
     def format_parser(self, in_format, out_format, in_data):
         # removes and splits by any non-alphanumeric characters. If there are multiple symbols it creates whitespace, hence the filter.
@@ -66,13 +71,23 @@ class util:
         out_format_items = list(filter(None, re.split('[^a-zA-Z]', out_format)))
         # Should be something like ['scheme', 'host', 'port']
         in_data_parsed = urlparse(in_data)
-
-
-
-
-
         # returns data parsed for output. Coverts the in_data to out_data
 
+
+
+    # @create_tmp_file: creates a temporary file for dynamically generated wordlists etc.
+    # @param: item_list: list: a list of items that are added to the file, separated by newlines.
+    # @param: tmp_dir: directory in which to put the file we're generating. 
+    # @return: tmp_file_path: the path of the generated file.
+    def create_tmp_file(self, item_list, tmp_dir):
+        if not os.path.exists(tmp_dir):
+            os.makedirs(tmp_dir)
+        tmp_uuid = str(uuid.uuid4())
+        tmp_file_path = tmp_dir + '/' + tmp_uuid
+        with open(tmp_file_path, 'w') as f:
+            for item in item_list:
+                f.write("%s\n" % item)
+        return tmp_file_path
 
                     
     def timestamp(self):

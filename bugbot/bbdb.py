@@ -139,6 +139,7 @@ class bbdb:
                 schedule_interval   TEXT NOT NULL,
                 schedule_uuid       TEXT NOT NULL,
                 tool                TEXT NOT NULL,
+                category            TEXT NOT NULL,
                 use_category        INT NOT NULL,
                 last_run            DATE,
                 last_scan_id        INTEGER,
@@ -391,12 +392,12 @@ schedule_info table:
         try:
             cursor.execute('INSERT INTO schedule_info (\
                 active, target, company, schedule_interval, schedule_uuid, \
-                tool, use_category, input, intype, informat, \
+                tool, category, use_category, input, intype, informat, \
                 output, outformat, outtype, \
                 wordlist_type, wordlist_file, wordlist_input, wordlist_outformat, \
-                parser, filesystem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
+                parser, filesystem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',\
                 (schedule['active'], schedule['target'], schedule['company'], schedule['schedule_interval'], \
-                    schedule['uuid'], schedule['tool'], schedule['use_category'], schedule['input'], schedule['intype'], \
+                    schedule['uuid'], schedule['tool'],  schedule['category'], schedule['use_category'], schedule['input'], schedule['intype'], \
                     schedule['informat'], schedule['output'], schedule['outformat'], schedule['outtype'], \
                     schedule['wordlist_type'], schedule['wordlist_file'], schedule['wordlist_input'], \
                     schedule['wordlist_outformat'], schedule['parser'], schedule['filesystem']))
