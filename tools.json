@@ -29,7 +29,21 @@
 			"file": "/usr/share/wordlists/all.txt"
 			}
 		},
-
+	"content_check": {
+		"category": "content_check",
+		"note": "Command not yet working",
+		"command": "gobuster -u TARGET -w WORDLIST -o OUTPUT -l",
+		"infile": "scope/wildcard_domains.txt",
+		"intype": "target",
+		"wordlist": {
+			"type": "asset",
+			"input": "discovered_content",
+            "informat": "host",
+            "intype": "file"
+		},
+		"category": "subdomain_enumeration",
+		"type": "domain"
+		},
 	"massdns": {
 		"category": "uptime_monitoring",
 		"note": "Command not yet working",
@@ -66,8 +80,9 @@
 		"command": "recursebuster -ajax -noui -clean -u TARGET -w WORDLIST -o OUTPUT",
 		"infile": "",
 		"intype": "target",
-		"wordlist": "/usr/share/wordlists/all.txt",
+		"wordlist": "/usr/share/wordlists/SecLists/Discovery/Web-Content/common.txt",
 		"category": "content_discovery",
-		"type": "both"
+		"type": "both",
+		"output": "content_discovery"
 	}
 } 

@@ -92,7 +92,7 @@ class scheduling:
                         schedule['filesystem'] = None
 
         if tool_found == False:
-            click.echo('[-] Tool not found.')
+            print('[-] Tool not found.')
             exit()
         self.util.verbose_print('[+] Adding schedule to database')
         self.db.add_schedule(schedule)
@@ -110,19 +110,22 @@ class scheduling:
             return -1
         parsed_table_list = []
         parsed_table_headers = []
+        returned_schedule_columns = ['target', 'company', 'schedule_interval', 'tool', 'input', 'last_run', 'output']
+
 
         if results:
             # Get the header array
-            print(results)
             for key, item in results[0].items():
-                parsed_table_headers.append(key)
+                if key in returned_schedule_columns:
+                    parsed_table_headers.append(key)
 
             parsed_table_list.append(parsed_table_headers)
 
             for result in results:
                 result_list = []
                 for key, item in results[0].items():
-                    result_list.append(item)
+                    if key in returned_schedule_columns:
+                        result_list.append(item)
                 parsed_table_list.append(result_list)
 
             return parsed_table_list
@@ -251,27 +254,35 @@ class scheduling:
     def prepare_tool(self, schedule_uuid):
         '''
         - Dynamic generation of command:
-            a. get schedule data from database via schedule ID
-            b. look at input: get all data on input from database
-            NOTE: Data needs to be processed here for various things such as:
+            1. get schedule data from database via schedule ID
+            2. look at input: get all data on input from database (assets)
+            3. Input Data needs to be processed here for various things such as:
                 - Unique values only
-                - 
-            c. look at intype: different execution for 3 different types of intype.
+                - getting the right format in and out
+                - Issue: what if the outformat of the last tool and the informat of the used tool don't match?
+                    - The scan won't run - it should gracefully error out and write to a log.
+                    - We need to have a log for any errors
+                - Create a function to do informat / outformat stuff in utils
+
+            4. look at intype: different execution for 3 different types of intype.
                 single: loop through assets and perform below functions on all of them
                 list:   put all database assets into a list format and 
                 file:   generate a file with all targets appropriately formatted and use this as the TARGET
-            d. if wordlist, check if there is a 'file' in the tool or given through CLI
+            5. if wordlist, check if there is a 'file' in the tool or given through CLI
                 otherwise, dynamically generate the wordlist file
-            e. run scan
-            f. parse results into database
+            6. run scan
+            7. parse results into database
         '''
         schedule = self.db.get_schedule_by_id(schedule_uuid)[0]
-        print('schedule', schedule)
         input_assets = self.db.get_assets_by_type(schedule['company'], schedule['target'], schedule['input'])
-        print('input_assets', input_assets)
+        #print('input_assets', input_assets)
+        #print(schedule)
 
-        command = schedule['command']
-
+        with open('tools.json', 'r') as tools_file:
+            tools = json.loads(tools_file.read())
+            # one liner to get the command from tools.json.
+            command = [tool_options['command'] for tool_name, tool_options in tools.items() if tool_name == schedule['tool']][0]
+            schedule['command'] = command
         # schedule example: {'id': 1, 'active': 1, 'target': 'test', 'company': 'google.com', 'schedule_interval': 'daily', 'schedule_uuid': 'e98c96d2-d9be-453f-baca-f524056a4fad', 'tool': 'amass', 'use_category': 0, 'last_run': None, 'last_scan_id': None, 'input': 'scope', 'intype': 'single', 'informat': 'host', 'output': 'discovered_hosts', 'outtype': 'multi', 'outformat': 'host', 'wordlist_type': 'file', 'wordlist_file': '/usr/share/wordlists/all.txt', 'wordlist_input': None, 'wordlist_outformat': None, 'parser': '^\\[[A-Za-z .]+\\]\\s+([\\-A-Za-z1-9.]+)', 'filesystem': None}
         # input_assets example: [{'id': 1, 'target': 'test', 'company': 'google.com', 'asset_type': 'scope', 'asset_content': 'test', 'asset_format': 'host', 'scan_datetime': 1565626695, 'scan_id': 0, 'ignore': 0}]
 
@@ -283,67 +294,52 @@ class scheduling:
         output_dir = self.base_dir + '/' + schedule['company'] + '/targets/' + schedule['target'] + '/' + schedule['category'] + '/' + schedule['tool'] + '/' + str(datetime.today().strftime('%d%m%Y'))
         try:
             os.makedirs(output_dir)
-            self.util.verbose_print('[+] Creating directory', output_dir, '.')
+            self.util.verbose_print('[+] Creating scan directory', output_dir, '.')
         except OSError:
-            self.util.verbose_print('[+] Directory', output_dir, 'found.')
+            self.util.verbose_print('[+] Scan directory', output_dir, 'found.')
             pass
 
         # step 2: Generate or use the wordlist, and sub it in the command 
+        print(schedule['command'])
         if 'WORDLIST' in schedule['command']:
+            print('\nwordlist in command \n')
             if schedule['wordlist_type'] == 'asset':
+                print('wordlist dynamic')
                 # Dynamically generated
                 wordlist_input_assets = self.db.get_assets_by_type(schedule['wordlist_input'])
                 wordlist_input_asset_list = [asset.get('asset_content') for asset in wordlist_input_assets]
                 # Here we need to format the wordlist assets appropriately.
-                # For this we need to make the function format_parser in utils to be created.
+                wordlist_formatted = [self.util.format_parser(schedule['informat'], word) for word in wordlist_input_asset_list]
+                if -1 in wordlist_formatted:
+                    print('error! input asset not able to be formatted')
+
+                print('formatted wordlist:', wordlist_formatted)
+                    
                 tmp_dir = self.base_dir + '/tmp'
-                tmp_file = self.util.create_tmp_file(wordlist_input_asset_list, tmp_dir)
+                tmp_file = self.util.create_tmp_file(wordlist_formatted, tmp_dir)
                 wordlist = tmp_file
                 command = command.replace('WORDLIST', wordlist)
 
             elif schedule['wordlist_type'] == 'file':
+                print('wordlist is file')
                 wordlist = schedule['wordlist_file']
                 command = command.replace('WORDLIST', wordlist)
             else:
-                print('error!')
+                print('Error! No associated wordlist!')
             # Check to see if there are wordlists in tools.json
             # Check if the wordlist is a file or dynamic
             # Check in informat of the wordlist and match it with the format of the input
             # If dynamic, generate the wordlist in the /tmp directory
             # (create the tmp dir in ~/bb)
+        else:
+            print('wordlist not in command')
 
         # step 3: 
 
 
         # final step: send it to threaded process
-        threading.Thread(target=self.run_thread_cmd, args=(company, target, command, outfile)).start()
+        #threading.Thread(target=self.run_thread_cmd, args=(company, target, command, outfile)).start()
 
-
-
-        # Grabbed from run_tool()
-        if tool_name == tool:
-
-            output_file = output_dir + '/' + tool + '.' + str(self.util.timestamp())
-            # Check that the tool actually uses a wordlist
-            if 'WORDLIST' in tool_options['command']:
-                # If no wordlist supplied, use the wordlist given as a param
-                if wordlist == 'default':
-                    wordlist = tool_options['wordlist']
-            else:
-                wordlist = ''
-            # Replaces the placeholders in the scan.
-            command = tool_options['command'].replace('INPUT', target).replace('OUTPUT', output_file).replace('WORDLIST', wordlist)
-            # This should really popen another command, not call exec(). For the time being though (and testing) it stays.
-            scan_id = target.strip() + tool + str(self.util.timestamp())
-            scan_data = {'category': tool_options['category'], 'tool': tool, 'command': command, 'output': output_file, 'scan_id': scan_id, 'status': 'waiting'}
-            # Add the scan to db (before the threading stuff comes into play)
-            self.util.verbose_print('[+] Adding scan to database.')
-            self.db.add_scan(company, target, scan_data)
-            # This should launch the command into a different thread!
-            self.util.verbose_print('[+] Starting new thread for scan.')
-            #self.run_cmd(target, scan_data)
-            # Python3's way of threading
-            threading.Thread(target=self.run_thread_cmd, args=(company, target, scan_data)).start()
 
 
 

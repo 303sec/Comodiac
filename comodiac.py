@@ -4,6 +4,7 @@ import json
 from terminaltables import AsciiTable
 
 # From stackoverflow - https://stackoverflow.com/questions/44247099/click-command-line-interfaces-make-options-required-if-other-optional-option-is
+# Not sure if actually needed but interesting to look at
 class NotRequiredIf(click.Option):
     def __init__(self, *args, **kwargs):
         self.not_required_if = kwargs.pop('not_required_if')
@@ -139,7 +140,8 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
 def view_schedule(verbose, company, target, schedule_id):
     """ View a scheduled scan by target, company or schedule id """
     scheduler = scheduling.scheduling(verbose)
-    print(AsciiTable(scheduler.get_schedule(company, target, schedule_id)).table)
+    schedule = scheduler.get_schedule(company, target, schedule_id)
+    print(AsciiTable(schedule).table)
     return
 
 @cli.command()
