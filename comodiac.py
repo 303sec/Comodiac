@@ -99,16 +99,16 @@ def view_target(verbose, company, target):
 @click.option('-i', '--schedule-interval', required=True, default='daily', help='Schedule Interval for scans')
 @click.option('-T', '--tool', help='Tool to schedule')
 @click.option('-C', '--category', help='Category of tools to schedule')
-@click.option('-p', '--preset', help='Schedule Preset')
+@click.option('-p', '--profile', help='Schedule profile')
 @click.option('-a', '--alert', help='Alert options', default='default')
-def add_schedule(verbose, company, target, schedule_interval, tool, category, preset, alert):
+def add_schedule(verbose, company, target, schedule_interval, tool, category, profile, alert):
     """ Adds a scheduled scan to the specified target """
 
-    if tool is None and preset is None and category is None:
+    if tool is None and profile is None and category is None:
         click.echo('[-] Error: at least one tool, category or preset required. Exiting.')
         exit()
     if preset:
-        print('Presets not yet supported! Exiting.')
+        print('Profiles not yet supported! Exiting.')
         exit()
     if category:
         print('Categories not yet supported! Exiting.')
@@ -261,8 +261,6 @@ def heartbeat(verbose, company, target, tool, category, from_date, to_date):
     return
 
 
-if __name__ == '__main__':
-	cli()
 
 
 
