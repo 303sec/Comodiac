@@ -25,19 +25,7 @@ This approach to security tooling is incredibly versatile, allowing for features
 * 
 
 
-## Note on Progress
 
-Whilst several features currently work, the project is still in it's infancy. The following features are still to do:
-* Alerting
-* Dynamic tooling wordlist input
-* Adding profiles and tools with the CLI. At the moment you manually need to edit tools.json.
-* Use of profiles with the tool
-* Meta - performing actions on scan completion outside of the scope of the tool such as creating directories or moving files. This is not a priority feature.
-* Web interface. This is not a priority feature.
-
-#### Call for Contributors
-
-If anyone wants to contribute and get things working let me know and I'll get you up to speed. 
 
 ## Examples
 
@@ -271,6 +259,17 @@ Options:
   --help              Show this message and exit.
 ```
 
+## Note on Progress
 
+This project is still in its infancy. The following features are still to do:
+* Alerting
+* Dynamic tooling wordlist input
+* Adding profiles and tools with the CLI. At the moment you manually need to edit tools.json.
+* Use of profiles with the tool
+* Meta - performing actions on scan completion outside of the scope of the tool such as creating directories or moving files. This is not a priority feature.
+* Web interface.
 
+#### Call for Contributors
+
+If anyone wants to contribute and get things working let me know and I'll get you up to speed. 
 
