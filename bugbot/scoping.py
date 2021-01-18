@@ -25,7 +25,7 @@ class scoping:
         self.util = util()
         self.verbose = verbose
         self.company_name = company_name
-        if os.path.exists(os.path.expanduser('~') + '/bb') == False:
+        if not os.path.exists(os.path.expanduser('~') + '/bb'):
             self.util.verbose_print(self.verbose, '[+] Creating ~/bb directory')
             os.mkdir(os.path.expanduser('~') + '/bb')
         self.base_dir = os.path.expanduser('~') + '/bb'
@@ -75,10 +75,10 @@ class scoping:
         # Avoid any silly dir issues
         target = target.replace('/', '-')
         if wildcard_root == None:
-            target_dir = self.company_dir + '/targets/' + self.util.ip_domain_url(target) + 's/' + target
+            target_dir = self.company_dir + '/targets/' + target
             target_notes_dir = target_dir + '/notes'
         else:
-            target_dir = self.company_dir + '/targets/' + self.util.ip_domain_url(target) + 's/' + wildcard_root + '/' + target
+            target_dir = self.company_dir + '/targets/' + wildcard_root + '/' + target
 
 
 
@@ -88,6 +88,9 @@ class scoping:
         self.util.verbose_print(self.verbose, '[+] Creating directory', target_dir)
         self.util.verbose_print(self.verbose, '[+] Creating directory', target_notes_dir)
         self.db.add_target(self.company_name, target, target_dir)
+        # target, company, asset_type, asset_content, asset_format, scan_datetime
+        asset_dict = {'asset_content': target, 'company': self.company_name, 'asset_type': 'scope', 'asset_format': 'host', 'scan_datetime': self.util.timestamp(), 'scan_id': 0, 'ignore': 0}
+        self.db.add_asset(target, asset_dict)
         self.util.verbose_print(self.verbose, '[+] Adding entry for', target ,'to database')
 
         # It's bad just excepting. Gotta get the right exception type to make this useful!
@@ -96,7 +99,6 @@ class scoping:
         #    pass
 
     def does_target_exist(self, target):
-        print(self.db.get_target_dir(target))
         if not self.db.get_target_dir(target):
             return False
         elif self.db.get_target_dir(target):

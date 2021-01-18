@@ -1,0 +1,327 @@
+To Do List - Macro
+
+Database - High priority COMPLETED
+- Figure out what to do about subdomain (nested) targets.
+	 - Conditional in the run_tool* functions.
+	 - If the category of the tool is subdomain_*, run extra functionality adding the subdomain to the discovered hosts.
+	 - Similar process for getting the IP address from a domain.
+	 - Similar process for reverse DNS
+	 - Basically any process that requires creating an extra discovered host to enumerate.
+- Parsing out results using GREPMONEY!
+- Enter data according to scan. e.g.
+{scan_time} | {tool} | {tool_output} | {alert}
+with tool_output being an asset.
+Assets are pieces of infomation discovered about the host. They can be:
+- Associated IP address
+- Open Ports
+- Discovered Content
+- Subdomain
+- Screenshot
+- Uptime check / IP discovery
+- 
+
+
+Alerting - Medium priority
+- functions to be called whenever a new scan takes place. NOT on a cron job, probably.
+	- Need correct db functions to make work
+- slack channel integration (should be simple enough)
+- Different types of alerts:
+	I: how many schedule_intervals need to have passed to warrant change?
+		1 = item changed since last scan
+		2 = item changed 2 scans ago and has stayed changed for that amount of time
+		3 = etc.
+	N: A new asset has been discovered, or has come back online
+		0 = New asset hasn't been seen at all
+		1 = New asset hasn't been seen in one or more scans
+		2 = New asset hasn't been seen in two or more scans
+		3 = New asset hasn't been seen in three or more scans
+
+
+What do I want to see?
+
+- If a new subdomain is found
+
+SELECT * FROM assets WHERE asset_content=? and asset_type=subdomain
+(found_subdomain, )
+if rutnes None: New subdomain!
+
+- If a new IP address is found
+SELECT * FROM assets WHERE asset_content=? AND asset_type=ip AND target=? AND company=?
+
+- If a new port is discovered
+SELECT * FROM assets WHERE asset_content=? and asset_type=port AND target=? AND company=?
+
+- If the given IP address of a domain name changes
+SELECT * FROM assets WHERE asset_content=?
+
+- If new content has been found
+- If a page's content has changed
+- If an asset comes back up after going down
+SELECT * FROM assets WHERE asset_content=? 
+- 
+
+
+
+
+
+
+(Low/Medium Priority) COMPLETED
+- Need to be able to present all current scans in a nicely formatted table.
+- A command like:
+bugbot --view-schedule -c Company -t Target
+
++----+---------------+-----------+----------+--------+--------+
+| ID | Tool          | Schedule  | Last Run | Active | Alert  |
++----+---------------+-----------+----------+--------+--------+
+| 31 | Amass_passive | Weekly    | 10/10/19 | True   | Off    |
++----+---------------+-----------+----------+--------+--------+
+| 35 | Amass_active  | Hourly    | 11/10/19 | False  | Daily  |
++----+---------------+-----------+----------+--------+--------+
+
+- Editing scheuled items:
+
+bugbot --edit-schedule 31 --Delete
+	Deletes ID 31
+bugbot --edit-schedule 35 -s weekly
+	Sets 35 to weekly
+bugbot --edit-schedule 31 --pause
+	Sets the scan to inactive
+bugbot --edit-schedule 31 --alert weekly
+	Sets the alerting to if there has been a 
+
+
+Alerting - High Priority
+
+
+
+
+
+Performing Scans - Top Priority COMPLETED
+- Create functions for each of the scan types.
+- Test to make sure the commands themselves work
+- How to parse out scan results?
+
+Alerting - Medium priority
+- functions to be called whenever a new scan takes place. NOT on a cron job, probably.
+	- Need correct db functions to make work
+- slack channel integration (should be simple enough)
+
+Tools.json - Medium Priority
+- meta: for scans that require extra functionalty to perform on the found assets after the scan.
+	- add_domain = Adds the asset as a discovered domain
+	- add_ip = Adds the asset as a disovered IP
+	- create_asset_dir = Create a dir for the discovered asset
+	- publish_to_web = Haven't figured out details, but should be able to add to make some kind of symlink in var/www to this folder. 
+	- more would be useful!
+
+
+
+Folder Structure - Medium Priority
+-  Implementing the IP addresses and subdomain symlinked stuff
+- Structuring the folders appropriately.
+- Latest folder... ignore?
+
+Web Interface - Low priority
+- Login page
+- Create graphs for data
+- Display screenshots
+- Format areas each host/target appropriately
+- Probably build some kind of flask api, need to research.
+- Add new scans
+
+
+CLI Wrapper - Medium priorotiy - COMPLETED
+
+
+
+Editing Scheduled scans - It's be incredibly useful to be able to edit the command when performing scans, to add new flags etc.
+
+
+
+Parsing output files -> Database -> Alert on change
+
+What defines a change? If we perform one scan and then another, presumably a change is anything different that comes from a scan. So we need to be able to look at all assets from a previous scan and compare 
+
+
+
+
+
+27-06-2019
+
+
+Next Steps:
+
+
+1 - Create tools.json properly: every tool in the below list needs to be integrated:
+
+Subdomain enum: Amass
+INPUT: scope
+OUTPUT: discovered_hosts
+
+Content Discovery: Recursebuster
+INPUT: discovered_hosts
+OUTPUT: dicovered_content
+
+Content Changes: Gobuster
+INPUT: discovered_content
+OUTPUT: content_length
+
+Visual Host Enumeration: Amass
+INPUT: discovered_hosts
+OUTPUT: web_document
+
+Visual Content Enumeration: Amass
+INPUT: discovered_content
+OUTPUT: web_document
+
+Domain IP monitor: nmap
+INPUT: discovered_hosts
+OUTPUT: discovered_ips
+
+Port Scan: masscan
+INPUT: discovered_ips
+OUTPUT: discovered_ports
+
+Port Check: nmap
+INPUT: discovered_ports
+OUTPUT: port_state (open or closed/filtered)
+# Port check = check to see if previously discovered port is now open/closed
+
+Service Enumeration: nmap
+INPUT: discovered_ports
+OUTPUT: service_details
+# Using nmap's service detection scripts to see what is running on the ports.
+
+CDN Bypass: custom script
+INPUT: discovered_hosts
+OUTPUT:
+
+
+Note that in some cases, the tools will need wrapper scripts to perform some parsing.
+
+
+Using the following template:
+(filesystem is the new 'meta', even though we hadn't really integrated that yet.)
+
+"domain_ip_monitor": {
+        "command": "nmap -sP TARGET -oG OUTPUT",
+        "intype": "single",
+        "outtype": "single",
+        "output": "discovered_ips",
+        "input": "discovered_hosts",
+        "informat": "host",
+        "outformat": "host",
+        "parse_result": "^Host: ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})",
+        "filesystem" : ""
+        }
+
+"content_length": {
+        "command": "gobuster -u TARGET -w WORDLIST -o OUTPUT",
+        "intype": "single",
+        "outtype": "single",
+        "output": "discovered_ips",
+        "input": "discovered_hosts",
+        "informat": "host",
+        "outformat": "host",
+        "parse_result": "^Host: ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})",
+        "filesystem" : ""
+        "wordlist": {
+            "type": "file"
+            "file": "/usr/share/wordlists/SecLists/Notrelevantforthis",
+            # Don't include a file if not needed!
+            "input": "",
+            "informat": "host"
+            "intype": "file"
+
+            }
+        }
+
+command:        the command used to perform the scan
+
+input:          what asset to get from the database
+informat:       how the tool wants the input URL
+    i.e. scheme://host:port
+intype:
+    single      single asset
+    file        create a temporary file of assets. TARGET = filename 
+    list        comma delimited list of assets
+
+output:         what to name the asset in the database
+outformat:      what format the tool outputs the URL. 
+    Note: this should be parsed into scheme://host:port/content
+    If not a url, just use 'raw'
+outtype:        what kind of output the tool gives
+    single      single asset: only perform regex on group 1
+    multi       multiple assets: need to loop through all regex groups
+outfile:        the extention of the file created to parse (json, txt, gnmap etc. If blank, none added.)
+
+parse_result:   the regular expression used to get the asset(s)
+
+filesystem:     any custom filesystem interactions, using custom functions.
+
+wordlist(dict)  wordlist to use. Can be dynamically generated. Parameter overridden by Scheduler if wordlist is supplied.
+    file        if file is supplied in the object, use this as the wordlist.
+    input       generate a wordlist from this asset (for the current target) from the database.
+    outtype      usually file, but can be single or list I guess(?)
+    outformat    same as base informat: what elements of the url to use and parse into a temp file.
+
+
+
+Step-by-step for handling tools.json:
+
+0. When a scope is added, add the scope items to the database as assets with the category/type 'scope'
+
+1.  When a new schedule is added, check to see if it's a valid tool.
+    How to check tool is valid:
+        Check the following:
+            Required params:
+                command
+                input
+                informat
+                intype
+                output
+                outformat
+                outtype
+                parse_results
+            if WORDLIST in command, wordlist param is required.
+
+2.  Put the raw tool info into the database in the scheduler.
+
+3.  TO DO: Sort out the schedule database to allow for the dynamic wordlists to be generated and work with the new tools.josn
+
+3.  The dynamic stuff happens at runtime. 
+When a scan is about to be run by the scheduler, do the following:
+    a. get schedule data from database
+    b. look at input: get all data on input from database
+    c. look at intype: different execution for 3 different types of intype.
+        single: loop through assets and perform below functions on all of them
+        list:   put all database assets into a list format and 
+        file:   generate a file with all targets appropriately formatted and use this as the TARGET
+    d. if wordlist, check if there is a 'file' in the tool or given through CLI
+        otherwise, dynamically generate the wordlist file
+    e. run scan
+    f. parse results into database
+
+
+
+How execution works:
+
+Heartbeat: Gets scan info from schedule table,
+    if schedule['use_category'] == 0:            
+        self.run_tool(schedule['tool'], schedule['company'], schedule['target'], wordlist)
+    elif schedule['use_category'] == 1:
+        self.run_tools_by_category(schedule['tool'],  schedule['company'], schedule['target'], wordlist)
+    else:
+        self.util.verbose_print('this should not ever happen.')
+
+run_tool()
+
+
+
+
+2 - Should be a simple but nice thing to add - allow for schedules to have names!
+3 - Create a function that handles tools.json appropriately.
+    - This will involve:
+    1: a function to check that it's a valid comodiac object (containing all the required params)
+    2:  
+3 - Tie the scripts together - make the functions that parse and change the in and out URL appropriately.

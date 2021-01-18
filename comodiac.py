@@ -1,10 +1,10 @@
 import click
 from bugbot import scheduling, scoping
 import json
-import uuid
 from terminaltables import AsciiTable
 
 # From stackoverflow - https://stackoverflow.com/questions/44247099/click-command-line-interfaces-make-options-required-if-other-optional-option-is
+# Not sure if actually needed but interesting to look at
 class NotRequiredIf(click.Option):
     def __init__(self, *args, **kwargs):
         self.not_required_if = kwargs.pop('not_required_if')
@@ -117,63 +117,19 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
     scope = scoping.scoping(company, verbose)
     scheduler = scheduling.scheduling(verbose)
 
-
-    # Need to check if the target exists. This would be easier if there was a database for the targets...
-    if not scope.does_target_exist(target):
-        click.echo('[-] Error: Target not found. Exiting.')
-        exit()
-        # add_target(verbose, company, target, None, None, None)
-
-
-    # @param: info: dict: A dictionary of relevant information about the schedule, including:
-    #
-    # schedule['active']: default = 1
-    # schedule['target']: required by CLI.
-    # schedule['company']: self.company
-    # schedule['schedule_interval']: default: 86400 (daily). Provided by CLI.
-    # schedule['tool']: name of the tool (or category, if use_category == 1) required by CLI. 
-    # schedule['use_category']: 1 if the scan is a category of tools (or just one). In the CLI, this can be used with --category
-
-    # schedule['wordlist']: default: the wordlist in tools.json
-    # schedule['infile']: if 'intype' == file, use this infile. From tools.json
-    # schedule['intype']: 'file' or 'target'. If file, use the supplied 'infile', which should be available in tools.json
-    # schedule['parser']: the parser regular expression to use on the output file. From tools.json
-    # schedule['meta']: any extra functions to perform post-scan. From tools.json
-
-
-    # This logic probably needs to be moved to scheduling.py at some point.
     if category:
         tool = category
         use_category = 1
     else:
         use_category = 0
 
-    with open('tools.json', 'r') as tools_file:
-        tool_found = False
-        tools = json.loads(tools_file.read())
-        for tool_name, tool_options in tools.items():
-            if tool_name == tool or tool_options['category'] == tool:
-                tool_found = True
-                if 'wordlist' in tool_options:
-                    wordlist = tool_options['wordlist']
-                else:
-                    wordlist = None
-                if tool_options['intype'] == 'file':
-                    schedule_input = tool_options['input']
-                else:
-                    schedule_input = target
-                intype = tool_options['intype']
-                parser = tool_options['parse_result']
-                meta = tool_options['meta']
-                schedule_uuid = str(uuid.uuid4())
+    # Need to check if the target exists. This would be easier if there was a database for the targets...
+    if not scope.does_target_exist(target):
+        click.echo('[-] Error: Target not found. Exiting.')
+        exit()
+    else:
+        scheduler.add_schedule(company, target, schedule_interval, tool, use_category, preset, alert)
 
-                schedule_interval
-                schedule = {'active': 1, 'target': target, 'company': company, 'schedule_interval': schedule_interval, \
-                'tool': tool, 'use_category': use_category, 'wordlist': wordlist, 'input': schedule_input, 'intype':intype, \
-                'parser':parser, 'meta': meta, 'alert': alert, 'uuid': schedule_uuid}
-                scheduler.add_schedule(schedule)
-    if tool_found == False:
-        click.echo('[-] Tool not found.')
 	
 
 @cli.command()
@@ -184,7 +140,8 @@ def add_schedule(verbose, company, target, schedule_interval, tool, category, pr
 def view_schedule(verbose, company, target, schedule_id):
     """ View a scheduled scan by target, company or schedule id """
     scheduler = scheduling.scheduling(verbose)
-    print(AsciiTable(scheduler.get_schedule(company, target, schedule_id)).table)
+    schedule = scheduler.get_schedule(company, target, schedule_id)
+    print(AsciiTable(schedule).table)
     return
 
 @cli.command()
@@ -213,11 +170,15 @@ def delete_schedule(verbose, company, target, schedule_interval, schedule_id, al
 @click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
 @click.option('-T', '--tool', help='Tool to schedule')
 @click.option('-C', '--category', help='Category of tools to schedule')
-def scan_now(verbose, company, target, tool, category):
-    """ Immediately perform a given scan """
+@click.option('-S', '--schedule-id', help='Schedule ID to run')
+def scan_now(verbose, company, target, tool, category, schedule_id):
+    """ Immediately perform a given scan. Currently not working - to do. """
     scheduler = scheduling.scheduling(verbose)
     if tool and category:
         click.echo('[-] Can only have either tool or category. Exiting.')
+        exit()
+    if target and not company:
+        click.echo('[-] Requires both target and company. Exiting.')
         exit()
     if schedule_id:
         click.echo('[+] Scanning by Schedule ID')
@@ -249,13 +210,7 @@ def view_assets(verbose, company, target, tool, category, from_date, to_date):
 
 @cli.command(hidden=True)
 @click.option('-v', '--verbose', is_flag=True, help='Increase the tool\'s verbosity')
-@click.option('-c', '--company', help='Company Name')
-@click.option('-t', '--target', help='Target Domain or IP in a comma delimited list')
-@click.option('-T', '--tool', help='Tool to schedule')
-@click.option('-C', '--category', help='Category of tools to schedule')
-@click.option('-fd', '--from-date', help='Start date of assets to view')
-@click.option('-td', '--to-date', help='End date of assets to view', default='today')
-def heartbeat(verbose, company, target, tool, category, from_date, to_date):
+def heartbeat(verbose):
     scheduler = scheduling.scheduling(verbose)
     scheduler.heartbeat()
     return

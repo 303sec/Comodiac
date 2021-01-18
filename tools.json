@@ -1,23 +1,51 @@
 {
-	"ping_check": {
-		"command": "nmap -sP INPUT -oG OUTPUT",
-		"category": "content_monitor",
-		"intype": "target",
-		"type": "both",
-		"parse_result": "",
-		"meta" : ""
-		},
-	"amass_active": {
-		"command": "amass -active -brute -ip -src -d INPUT -oA OUTPUT -w WORDLIST",
-		"infile": "wildcard_domains.txt",
-		"wordlist": "/usr/share/wordlists/all.txt",
+	"domain_ip_monitor": {
+		"category": "uptime_monitoring",
+        "command": "nmap -sP TARGET -oG OUTPUT",
+        "intype": "single",
+        "input": "discovered_hosts",
+        "informat": "host",
+        "outtype": "single",
+        "output": "discovered_ips",
+        "outformat": "host",
+        "outfile": "",
+        "parse_result": "^Host: ([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})",
+        "filesystem" : ""
+        },
+	"amass": {
 		"category": "subdomain_enumeration",
-		"intype": "file",
-		"type": "domain",
-		"parse_result": "regex",
-		"meta": "add_"
+		"command": "amass -active -brute -ip -src -d TARGET -oA OUTPUT -w WORDLIST",
+		"input": "scope",
+		"intype": "single",
+		"informat": "host",
+		"outfile": "txt",
+        "outtype": "multi",
+        "output": "discovered_hosts",
+        "outformat": "host",
+        "parse_result": "^\\[[A-Za-z .]+\\]\\s+([\\-A-Za-z1-9.]+)",
+        "filesystem" : "",
+		"wordlist": {
+			"type": "file",
+			"file": "/usr/share/wordlists/all.txt"
+			}
+		},
+	"content_check": {
+		"category": "content_check",
+		"note": "Command not yet working",
+		"command": "gobuster -u TARGET -w WORDLIST -o OUTPUT -l",
+		"infile": "scope/wildcard_domains.txt",
+		"intype": "target",
+		"wordlist": {
+			"type": "asset",
+			"input": "discovered_content",
+            "informat": "host",
+            "intype": "file"
+		},
+		"category": "subdomain_enumeration",
+		"type": "domain"
 		},
 	"massdns": {
+		"category": "uptime_monitoring",
 		"note": "Command not yet working",
 		"command": "python ~/tools/subbrute/subbrute.py WORDLIST TARGET  | massdns -r /root/tools/massdns/ -t A -o -w OUTPUT",
 		"infile": "scope/wildcard_domains.txt",
@@ -27,32 +55,34 @@
 		"type": "domain"
 		},
 	"amass_passive": {
-		"command": "amass -passive -ip -src -df INPUT -oA OUTPUT",
+		"category": "OSINT",
+		"command": "amass -passive -ip -src -df TARGET -oA OUTPUT",
 		"infile": "scope/wildcard_domains.txt",
 		"intype": "target",
 		"category": "osint",
 		"type": "domain"
 		},
 	"aquatone": {
-		"command": "cat INPUT | aquatone -out OUTPUT",
+		"command": "cat TARGET | aquatone -out OUTPUT",
 		"infile": "scope/discovered_hosts.txt",
 		"intype": "target",
 		"category": "visual_enumeration",
 		"type": "both"
 		},
 	"masscan": {
-		"command": "masscan -p1-65535 INPUT --max-rate 1000 |& tee OUTPUT",
+		"command": "masscan -p1-65535 TARGET --max-rate 1000 |& tee OUTPUT",
 		"infile": "all_discovered_domains.txt",
 		"intype": "file",
 		"category": "port_scan",
 		"type": "ip"
 	},
 	"recursebuster": {
-		"command": "recursebuster -ajax -noui -clean -u INPUT -w WORDLIST -o OUTPUT",
+		"command": "recursebuster -ajax -noui -clean -u TARGET -w WORDLIST -o OUTPUT",
 		"infile": "",
 		"intype": "target",
-		"wordlist": "/usr/share/wordlists/all.txt",
+		"wordlist": "/usr/share/wordlists/SecLists/Discovery/Web-Content/common.txt",
 		"category": "content_discovery",
-		"type": "both"
+		"type": "both",
+		"output": "content_discovery"
 	}
 } 

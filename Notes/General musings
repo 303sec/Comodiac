@@ -1,0 +1,393 @@
+General musings:
+
+We start off with separate domains and IP addresses.
+
+Do we treat them as the same or different?
+
+Differences:
+a domain name can be used in the host header with a web server to access spacific areas of a server
+a domain name has multiple records that can further enumeration
+a domain name generally contains one or more IP addresses that it points to
+
+Problem:
+Each domain name is linked to an IP address, which is variable to change.
+Fix:
+Scan IP addresses as a separate entity, with their own folder.
+
+
+Problem:
+Each IP may have multiple webservers, each of which may have different host headers.
+Fix:
+Treat every subdomain (host header) as a unique webapp / target
+The IP address gets added to the IPs folder, and the IP address is also a target
+At this point we probably need to go manual, but my process would be the following:
+1 - check if unique IP (as in not a CDN, maybe a VPS, normal server or cloud server)
+2 - If the IP is unique, attempt to use the host header for all in scope and discovered hosts. If it returns more content, this is now a new webapp/target.
+Alternatively:
+Don't put too much emphasis on the IP address to Webserver relationship.
+Subdomain -> IP
+Subdomains have related IP addresses. Sometimes these are CDNs, but even CDNs have origins. There should be an uptime scan which gives the IP address. If the IP address is not a CDN and hasn't been seen before, alert and add the IP address to the IP section of the bugbot.
+
+IP -> Subdomain
+For every IP address, perform a reverse DNS lookup. Any hosts found, add to discovered_hosts. Definitely worth noting down where the discovered host was enumerated from, also. Maybe a file called discovered_hosts_origins, with a format like:
+example.com:reverse_dns from 1.1.1.1
+
+And if an IP address discovers a webserver, it needs to be added to a relevant dir.
+
+
+Problem:
+Running shell commands and waiting for response appropriately
+
+Fix:
+0 - Have an 'executor' script/CLI functionality to handle scans/processes, doing the following:
+1 - Adds scan info to the target db in a table called 'live_scans' or something equally appropriate.
+1 - Uses a blocking Popen, starttime/scan endtime PID and any errors. 
+2 - The followng is a rough idea for the live_scans table:
+	ID:                   PRIMARY KEY
+    scan_name:            TEXT NOT NULL
+    scan_command:         TEXT NOT NULL
+    scan_started:         DATE NOT NULL
+    scan_completed:		  DATE
+    scan_pid:			  TEXT NOT NULL
+    scan_status:		  TEXT NOT NULL
+
+3 - scan_status can be:
+waiting
+running
+completed
+error
+parsed
+(more can be added if needed)
+
+4 - Once a scan is complete, it parses the output of the scans within the script with the BB functionality.
+5 - Once scan is completed and parsed, runs a bb_alert tool to look over database history and see if there has been any change.
+6 - Quite likely worth having slack chats dedicated to progress monitoring - like a room for errors, a room for completed scans, a room for started scans.
+7 - Can take an input of multiple tools at once, to run them all in a blocking fashion in a loop to keep processing down.
+8 - Possible later feature: run scans as either blocking or async!
+
+
+
+
+
+ISSUE: ASSET STORAGE FOR ALERTING
+
+How assets are stored when they have a relationship with another asset:
+
+Ports:
+<IP>:<PORT>
+eg.
+10.10.10.10:4312
+
+Content:
+<scheme>://<domain>/<content>|response|content_length
+https://test.com/content|200|13526
+
+The target parameter is pretty useful here to be fair...
+
+target: 10.10.10.10
+Port: 3421
+
+target:test.com
+Content: /content/this.html|200|12435
+(still definintely worth doing response and length)
+
+target:test.com
+Subdomain: admin.test.com
+
+target: 
+
+
+
+Types of asset:
+subdomain
+domain
+IP address
+port
+content (full URL, HTTPS status & content length)
+screenshot
+
+
+Categories:
+OSINT:
+    - Whois
+    - Is the IP Address a CDN?
+    - Not really sure about this one
+Subdomain enumeration
+    - Amass
+    - Subfinder
+Domain Enumeration
+    - Massdns + generated wordlist
+Content Monitoring
+    - Checking the content for changes in content-length (?)
+    - Checking if port is still open (or, if previously closed, is open again)
+    - Checking if an IP address is still alive (or, if previously non-live, is live again)
+Content Discovery
+    - Spidering (Need some kind of tool to do this)
+    - Javascript Parsing
+Content Bruteforcing
+    - Gobuster / Recursebuster
+    - Parameter bruteforcing (Parameth)
+Visual Enumeration
+    - Aquatone, screenshot EVERYTHING
+    - Eyewitness(?)
+Port Scan
+    - nmap scripts on found open ports
+    - massscan for open ports
+Non-intrusive vuln scan
+    - CDN Bypass
+    - Subdomain Takeover
+intrusive vuln scan
+    - sqlmap
+    - bxss
+Credential bruteforce (probably not worth it):
+    - brutespray
+
+
+
+Important to note: the tools.json file needs more placeholders linke INPUT and OUTPUT.
+
+add-targets
+1 - Parse the cli / file into inscope*.txt
+2 - Parse any wildcard domains into wildcard*.txt
+3 - Create folders for each of the items in inscope*.txt, containing a notes folder.
+
+
+
+Issue: The difference between single targets and file inputs, and the way regular expressions deal with that.
+Fix 1: Have regexs that include the TARGET placeholder. Bit hack-y (we'd need to escape things like any dots or slashes), but might be the best option.
+Fix 2: Only have single targets as input and when it's a file just run the tool on a loop through the targets in the file
+Notes: Considering the tools in use is really important. 
+
+
+
+Issue: the 'meta' field might be a bit too complicated. Currently considering it to be a list of conditionals with logic attached. Worth considering whether or not it's relevant.
+Why the meta field is relevant:
+    - Meta is useful in creating sub-folders within a target
+    - Meta can be used to tie results together in certain ways
+    - Allows for extra flexibility, and only need to implement extra functionality when used
+    - Can be a low priority feature until there is a dealbreaker.
+
+These are the proposed initial 'meta' options:
+- meta: for scans that require extra functionalty to perform on the found assets after the scan.
+    - add_domain = Adds the asset as a discovered domain
+        - Useful for domains discovered through reverse DNS lookups, etc.
+    - add_ip = Adds the asset as a disovered IP
+        - We'll certainly find IP addresses when looking at domain names.
+    - create_asset_dir = Create a dir for the discovered asset
+        - we'll want to know the 'host' of the asset, and we'll add this as a sub asset
+    - publish_to_web = Haven't figured out details, but should be able to add to make some kind of symlink in var/www to this folder.  
+
+UPDATE: meta has been replaced with filesystem.
+Now we can parse things like discovered hosts appropriately with the database, we probably won't need add_domain. Maybe.
+The important things will be creating asset directory
+
+
+
+
+So just to make some quick notes whilst thinking about this:
+
+step by step enumeration:
+
+Subdomain discovery
+Input: wildcard_domains.txt
+Output: discovered_hosts.txt
+
+Content discovery
+Input: discovered_hosts.txt in filesystem OR some kind of database entry for discovered hosts.
+Output: (wildcard)/target/discovered_content.txt
+
+Okay, this is a bit clearer now! So we need a way of labelling the 'type' of data in the db in order to use the INPUT side of things correctly.
+For example, 
+
+
+
+Issue:
+We need to determine how the inputs and outputs works. We can get different inputs in the form of single targets or files - which can reference other scan types. 
+
+Different inputs: 
+- Discovered content
+- Discovered domains
+- Discovered IPs
+- Single domain
+- Single IP
+Note that all of these must be in scope, so we'll need to check the scope on these.
+
+Different outputs:
+- Files on filesystem
+- Results parsed into database for alerting
+- Add to discovered content
+
+One of the difficulties here is knowing what to put on the filesystem and what to have in the database.
+Ideally, the database will have all the information, whilst the filesystem will have everything structured nicely to help with organisation.
+
+Discovered Content is the important factor here. When it comes to looking at data, we need to find all unique things that have been discovered - content, domains, IPs, etc. The issue is that it's difficult to differentiate data in a way that is flexible and works for all edge cases. For example, we'll be performing the following kind of scans:
+
+content_discovery:
+ - Spidering
+ - Parse JS files
+ - gobuster
+
+content_monitoring:
+ - Check to see if the content_length of response has changed by more than 5%. 
+ - INPUT: All discovered content
+ - OUTPUT: content_length
+
+visual_enumeration:
+ - 
+
+
+This is the list from General Musings:
+
+Categories:
+OSINT:
+    - Whois
+    - Is the IP Address a CDN?
+    - Not really sure about this one
+Subdomain enumeration
+    - Amass
+    - Subfinder
+Domain Enumeration
+    - Massdns + generated wordlist
+Content Monitoring
+    - Checking the content for changes in content-length (?)
+    - Checking if port is still open (or, if previously closed, is open again)
+    - Checking if an IP address is still alive (or, if previously non-live, is live again)
+Content Discovery
+    - Spidering (Need some kind of tool to do this)
+    - Javascript Parsing
+Content Bruteforcing
+    - Gobuster / Recursebuster
+    - Parameter bruteforcing (Parameth)
+Visual Enumeration
+    - Aquatone, screenshot EVERYTHING
+    - Eyewitness(?)
+Port Scan
+    - nmap scripts on found open ports
+    - massscan for open ports
+Non-intrusive vuln scan
+    - CDN Bypass
+    - Subdomain Takeover
+intrusive vuln scan
+    - sqlmap
+    - bxss
+Credential bruteforce (probably not worth it):
+    - brutespray
+
+
+
+
+
+
+
+Figure out how the parsing & assets will work
+    - Parsing: Regex to be performed on every line of the output file
+    - returns a list of all parsed assets
+    - These parsed assets get put into the database
+    - Every time a new scan is completed, various alerting checks are made. This includes:
+        
+        - Anything that has never been seen before in a scan
+        - Anything that has come up after being down for x amount of time / scans
+        - Anything (content) that has changed - relevant with scans on single things.
+
+    Which exposes an interesting point: we need to consider that there are two types of scans: single response and multi-response. As in, some scans will only have one asset (like on or off), whereas others will have multiple assets (like a list of content, or associated subdomains)
+
+    The database stores assets in the following table:
+
+    id:                   PRIMARY KEY
+    target:               TEXT NOT NULL
+    company:              TEXT NOT NULL
+    asset_type:           TEXT NOT NULL
+    asset_content:        TEXT NOT NULL
+    scan_completed:       DATE NOT NULL
+    scan_uuid             TEXT NOT NULL
+    ignore                INT NOT NULL
+
+
+Which means that we can get a list of all assets found in a single scan through the scan_id (or uuid, if we chose to implement that)
+
+
+================================================
+
+Assets: data stuff
+
+An asset is used for monitoring, for alerting and as input for other scans.
+
+The most important and difficult factor is getting the output data to work with other tools.
+
+Other tools have inputs such as the following:
+
+full_urls.txt   (aquatone)
+paths.txt       (gobuster)
+single asset    (uptime check)
+
+and the wordlists will sometimes have to be generated dynamically, too.
+
+Yeesh.
+
+So we've got the following different inputs:
+
+INPUT
+Single Asset
+List of assets (Symbol deliniated)
+Text file of assets - in different formats, as required.
+
+Note that there is added complexity involving the actual formatting of the asset. 
+
+WORDLIST
+can be a wordlist from our filesystem or a wordlist text file of loads of assets
+we'll have to generate the wordlist text file from assets from the database.
+
+
+And we have different kinds of outputs:
+
+True / False: in cases such as uptime checking
+URL: containing part or all of scheme://host:port/path?query
+Text: containing stuff like URLs and status codes.
+Number: in cases like checking for content length 
+Serialised Data: When we start performing vuln scans, we'll need information on the output of these. The serialised data can contain something like a base64 encoded HTTP request, or just a string. Not massively important for the time being, but worth being aware of.
+
+
+
+
+And when we run a scan, there is an output file generated that will have the required information, but not formatted right.
+
+So we'll have to regex out all of the assets, then stick them into the database with some kind of coherent formatting.
+
+URLs are the most common type of asset, so there need to be some in-built parsing methods.
+
+We need to really figure out all inputs to use. Like, are they just going to be IPs, domains and URLs? Or would I need to use some kind of content length as an input? 
+
+Important Question: Is there any tool that has an input that isn't some form of IP, domain or URL?
+No! 
+This makes life easier. We just need to add asset_out_format and asset_in_format to the items accordingly and it should 
+
+
+
+The table schema is as follows:
+
+
+    id:                   PRIMARY KEY
+    target:               TEXT NOT NULL
+    company:              TEXT NOT NULL
+    asset_type:           TEXT NOT NULL
+        # Used to get the correct input for another scan
+    asset_format:         TEXT NOT NULL
+        # scheme://host:port/path?query
+    asset_content:        TEXT NOT NULL
+    scan_completed:       DATE NOT NULL
+    scan_id               INTEGER NOT NULL
+    ignore                INT NOT NULL
+
+
+
+Target, company, scan completed and scan_id is pretty self explanatory.
+asset_type: 
+Different scans have different required input. For example, if an asset_type is 'discovered_subdomains' then it can be used by other tools that need subdomains as the input.
+To have another tool use the output of a specific asset_type, the asset_type needs to match the input_type in the tools.json file of the tool you want to use the asset of. This needs to be written better to be made clearer.
+
+
+
+
+
+
+
